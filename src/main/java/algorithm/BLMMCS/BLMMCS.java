@@ -21,7 +21,7 @@ public class BLMMCS {
     /**
      * hitting sets that are minimal on its local branch
      */
-    private List<CoverSet> coverSets;
+    private List<CoverSet> coverSets = new ArrayList<>();
 
     /**
      * record CoverSets that have been walked, by the hashCode of its elements
@@ -29,6 +29,7 @@ public class BLMMCS {
     private Set<Integer> walked;
 
 
+/*
     public static void main(String[] args) {
         List<Subset> subsets = new ArrayList<>();
         Subset ABC = new Subset(BitSet.valueOf(new long[]{0b000111}));
@@ -47,21 +48,23 @@ public class BLMMCS {
         blmmcs.processAddedSubsets(newSubsets);
         blmmcs.getGlobalMinHitSets().stream().map(s->s.elements).forEach(System.out::println);
     }
+*/
 
-    public BLMMCS(int nEle, List<Subset> toCover) {
+    public BLMMCS(int nEle, List<BitSet> toCover) {
         nElements = nEle;
-        subsetsToCover = toCover;
+        subsetsToCover = toCover.stream().map(Subset::new).collect(Collectors.toCollection(ArrayList::new));
         coverSets = new ArrayList<>();
         walked = new HashSet<>();
     }
 
-    public List<CoverSet> getGlobalMinHitSets() {
+    public List<BitSet> getGlobalMinCoverSets() {
         return coverSets.stream()
                 .filter(CoverSet::isGlobalMinimal)
+                .map(CoverSet::getElements)
                 .collect(Collectors.toList());
     }
 
-    public List<CoverSet> getAllHitSets() {
+    public List<CoverSet> getAllCoverSets() {
         return coverSets;
     }
 
@@ -77,11 +80,7 @@ public class BLMMCS {
         }
 
         CoverSet emptyCover = new CoverSet(nElements, S, uncov, crit, coverMap);
-        List<CoverSet> res = new ArrayList<>();
-
-        walkDown(emptyCover, res);
-
-        coverSets = res;
+        walkDown(emptyCover, coverSets);
     }
 
     /**
@@ -96,7 +95,9 @@ public class BLMMCS {
             return;
         }
 
-        // TODO: optimize travel order?
+        // TODO: prune: remove an ele from S and check whether it's been walked?
+
+        // TODO: optimize travel order from small to large?
         S.getCandidates().forEach(e -> {
             CoverSet childS = S.getChildS(e);
             walkDown(childS, res);
@@ -104,22 +105,22 @@ public class BLMMCS {
     }
 
 
-    public void processAddedSubsets(List<Subset> addedSubsets) {
+    public void processAddedSubsets(List<BitSet> addedSets) {
         walked.clear();
+        List<Subset> addedSubsets = addedSets.stream().map(Subset::new).collect(Collectors.toList());
         subsetsToCover.addAll(addedSubsets);
 
         List<CoverSet> newCoverSets = new ArrayList<>();
-
-        for (CoverSet S : coverSets) {
-            S.addSubSets(addedSubsets);
-            walkDown(S, newCoverSets);
+        for (CoverSet prevCoverSet : coverSets) {
+            prevCoverSet.addSubsets(addedSubsets);
+            walkDown(prevCoverSet, newCoverSets);
         }
 
         coverSets = newCoverSets;
     }
 
     public void walkUp(CoverSet S, List<CoverSet> res) {
-        if(walked.contains(S.hashCode())) return;
+        if (walked.contains(S.hashCode())) return;
         walked.add(S.hashCode());
 
         // TODO: will walkUp prune some branches?
@@ -138,6 +139,4 @@ public class BLMMCS {
 
         coverSets = newCoverSets;
     }
-
-
 }

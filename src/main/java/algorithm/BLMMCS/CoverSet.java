@@ -5,7 +5,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class CoverSet {
+
     private int nElements;
+
+    public BitSet getElements() {
+        return elements;
+    }
 
     public BitSet elements;
 
@@ -20,7 +25,6 @@ public class CoverSet {
      * coverMap[i]: subsets covered by element i
      */
     private ArrayList<ArrayList<Subset>> coverMap;
-
 
     public CoverSet(int nEle) {
         nElements = nEle;
@@ -74,7 +78,7 @@ public class CoverSet {
 
     void cloneContext(int e, CoverSet parentS) {
         elements = (BitSet) parentS.elements.clone();
-        uncov = new LinkedList<>();     // no need to clone here, filter from parentS.uncov
+        uncov = new LinkedList<>();     // no need to clone here
         crit = new ArrayList<>(parentS.crit.size());
         coverMap = new ArrayList<>(parentS.coverMap.size());
 
@@ -88,7 +92,6 @@ public class CoverSet {
         uncov = parentCoverSet.uncov.stream()
                 .filter(F -> {
                     if (!F.hasElement(e)) return true;
-                    F.addCover(e);
                     crit.get(e).add(F);
                     coverMap.get(e).add(F);
                     return false;
@@ -102,12 +105,15 @@ public class CoverSet {
         elements.set(e);
     }
 
-    public void addSubSets(List<Subset> addedSubsets) {
+    public void addSubsets(List<Subset> addedSubsets) {
         // TODO: run some tests in advance
         for (Subset newSubset : addedSubsets) {
-            BitSet t = (BitSet) elements.clone();
-            t.or(newSubset.elements);
-            if (!t.equals(elements)) uncov.add(newSubset);
+            BitSet intersec = (BitSet) elements.clone();
+            intersec.and(newSubset.elements);
+
+            if (intersec.isEmpty()) uncov.add(newSubset);
+            else intersec.stream().forEach(i -> coverMap.get(i).add(newSubset));
+            if (intersec.cardinality() == 1) crit.get(intersec.nextSetBit(0)).add(newSubset);
         }
     }
 

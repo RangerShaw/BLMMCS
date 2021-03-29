@@ -2,11 +2,11 @@ package util;
 
 import com.csvreader.CsvReader;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public class DataLoader {
 
@@ -14,15 +14,11 @@ public class DataLoader {
         List<List<String>> content = new ArrayList<>();
 
         try {
-            // 创建 CSV Reader 对象, 参数说明（读取的文件路径，分隔符，编码格式)
             CsvReader csvReader = new CsvReader(readCsvFilePath, ',', StandardCharsets.UTF_8);
-            // 跳过表头
-            csvReader.readHeaders();
-
-            // 读取除表头外的内容
+            csvReader.readHeaders();    // 跳过表头
+            // 按行读取除表头外的内容
             while (csvReader.readRecord()) {
-                // 读取一整行
-                content.add(Arrays.stream(csvReader.getValues()).collect(Collectors.toCollection(ArrayList::new)));
+                content.add(new ArrayList<>(Arrays.asList(csvReader.getValues())));
             }
             csvReader.close();
         } catch (Exception e) {
@@ -31,4 +27,64 @@ public class DataLoader {
 
         return content;
     }
+
+    public static Map<BitSet, Integer> readYyaDiffSets(String readDiffSetsFilePath) {
+        File file = new File(readDiffSetsFilePath);
+        HashMap<BitSet, Integer> differenceSets = new HashMap<>();
+        List<String> result = new ArrayList<>();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));//构造一个Bufferedreader读取文件
+            String s = null;
+            while ((s = br.readLine()) != null) {
+                result.add(s);
+            }
+            br.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        for (String s : result) {
+            int index = s.indexOf('}');
+            BitSet bitSet = new BitSet();
+            String[] newS = s.substring(1, index).split(", ");
+            for (String str : newS) {
+                if (str != null && str.length() > 0)
+                    bitSet.set(Integer.parseInt(str));
+            }
+            differenceSets.put(bitSet, Integer.parseInt(s.substring(index + 2)));
+        }
+
+        return differenceSets;
+    }
+
+    public static Set<BitSet> readDiffSets(String readDiffSetsFilePath) {
+        File file = new File(readDiffSetsFilePath);
+        Set<BitSet> differenceSets = new HashSet<>();
+
+        List<String> result = new ArrayList<>();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));//构造一个Bufferedreader读取文件
+            String s = null;
+            while ((s = br.readLine()) != null) {
+                result.add(s);
+            }
+            br.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        for (String s : result) {
+            int index = s.indexOf('}');
+            BitSet bitSet = new BitSet();
+            String[] newS = s.substring(1, index).split(", ");
+            for (String str : newS) {
+                if (str != null && str.length() > 0)
+                    bitSet.set(Integer.parseInt(str));
+            }
+            differenceSets.add(bitSet);
+        }
+
+        return differenceSets;
+    }
+
 }

@@ -1,9 +1,11 @@
 package algorithm.differenceSet;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.*;
 
 public class PLI {
-    int nAttributes;
+    public int nAttributes;
 
     List<List<String>> data;
 
@@ -13,8 +15,8 @@ public class PLI {
     List<Map<String, Integer>> pliMap = new ArrayList<>();
 
     /**
-     * pli[i]: clusters on attribute[i]
-     * pli[i][j]: on attribute[i], what tuples belong to cluster[j]
+     * pli[i]: clusters on attribute[i];
+     * pli[i][j]: on attribute[i], what tuples belong to cluster[j];
      * pli[i][j][k]: tuple index
      */
     List<List<List<Integer>>> pli = new ArrayList<>();
@@ -24,7 +26,7 @@ public class PLI {
      */
     List<List<Integer>> inversePli = new ArrayList<>();
 
-    Set<BitSet> differenceSet = new HashSet<>();
+    List<BitSet> differenceSets = new ArrayList<>();
 
     public PLI(List<List<String>> data) {
         this.data = data;
@@ -37,7 +39,7 @@ public class PLI {
         }
     }
 
-    public void initiatePLI() {
+    public void generatePLI() {
         for (int i = 0; i < nAttributes; i++) {
             Map<String, Integer> pliMap_i = pliMap.get(i);
             List<List<Integer>> pli_i = pli.get(i);
@@ -54,25 +56,50 @@ public class PLI {
                 inversePli_i.add(cluster);
             }
         }
+
+        data.clear();
     }
 
-    public void initiateDiffSet() {
-        // TODO: change calculation method
-        Set<Integer> addedDiffSet = new HashSet<>();
-        for (int i = 0; i < inversePli.get(0).size() - 1; i++) {
-            for (int j = i + 1; j < inversePli.get(0).size(); j++) {
-                BitSet s = new BitSet(nAttributes);
-                for (int k = 0; k < inversePli.size(); k++) {
-                    if (!inversePli.get(k).get(i).equals(inversePli.get(k).get(j)))
-                        s.set(k);
-                }
-                if(!s.isEmpty() && !addedDiffSet.contains(s.hashCode())) {
-                    differenceSet.add(s);
-                    addedDiffSet.add(s.hashCode());
+    public List<BitSet> generateDiffSets() {
+        List<List<Integer>> strips = new ArrayList<>();
+        pli.stream()
+                .flatMap(Collection::stream)
+                .filter(cluster -> cluster.size() > 1)
+                .forEach(strips::add);
+
+        System.out.println("Computing agree sets...");
+        Set<BitSet> agreeSets = new HashSet<>();
+        for (List<Integer> strip : strips) {
+            for (int i = 0; i < strip.size(); i++) {
+                for (int j = i + 1; j < strip.size(); j++) {
+                    BitSet agreeSet_ij = new BitSet(nAttributes);
+                    for (int k = 0; k < nAttributes; k++)
+                        if (inversePli.get(k).get(i).equals(inversePli.get(k).get(j)))
+                            agreeSet_ij.set(k);
+                    agreeSets.add(agreeSet_ij);
                 }
             }
         }
 
+        System.out.println("Computing diff sets...");
+        try {
+            PrintWriter out = new PrintWriter("letterDS.txt");
+
+            for (BitSet agreeSet : agreeSets) {
+                BitSet diffSet = (BitSet) agreeSet.clone();
+                diffSet.flip(0, nAttributes);
+                differenceSets.add(diffSet);
+
+                out.println(diffSet);
+                if(diffSet.equals(BitSet.valueOf(new long[]{0b10011010001})))
+                    System.out.println("0467 10");
+            }
+            out.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return differenceSets;
     }
 
 }
