@@ -15,6 +15,21 @@ public class Subset {
         return elements.get(e);
     }
 
+    public int getCoverCount(BitSet coverElements) {
+        BitSet intersection = (BitSet) coverElements.clone();
+        intersection.and(elements);
+        return intersection.cardinality();
+    }
+
+    /**
+     * @return -1 if this subset has no critical cover w.r.t coverEle
+     */
+    public int getCritCover(BitSet coverEle) {
+        BitSet intersec = (BitSet) coverEle.clone();
+        intersec.and(elements);
+        return intersec.cardinality() == 1 ? intersec.nextSetBit(0) : -1;
+    }
+
     // TODO: rewrite hashCode and equals
 
 //    BitSet elements;
