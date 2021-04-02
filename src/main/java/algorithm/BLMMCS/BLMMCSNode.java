@@ -6,6 +6,8 @@ import java.util.stream.IntStream;
 
 public class BLMMCSNode {
 
+    private static BLMMCSNode nonCoverNode;
+
     private int nElements;
 
     private BitSet elements;
@@ -20,21 +22,20 @@ public class BLMMCSNode {
      */
     private ArrayList<ArrayList<Subset>> crit;
 
-    /**
-     * coverMap[i]: subsets covered by element i
-     */
-    private ArrayList<ArrayList<Subset>> coverMap;
-
-    public BLMMCSNode(int nEle) {
+    private BLMMCSNode(int nEle) {
         nElements = nEle;
     }
 
-    public BLMMCSNode(int nEle, BitSet elements, LinkedList<Subset> uncov, ArrayList<ArrayList<Subset>> crit, ArrayList<ArrayList<Subset>> coverMap) {
+    public BLMMCSNode(int nEle, BitSet elements, LinkedList<Subset> uncov, ArrayList<ArrayList<Subset>> crit) {
         nElements = nEle;
         this.elements = elements;
         this.uncov = uncov;
         this.crit = crit;
-        this.coverMap = coverMap;
+
+        nonCoverNode = new BLMMCSNode(nElements);
+        nonCoverNode.elements = new BitSet();
+        nonCoverNode.uncov = new LinkedList<>();
+        nonCoverNode.uncov.add(new Subset(new BitSet()));
     }
 
     public BitSet getElements() {
@@ -45,7 +46,7 @@ public class BLMMCSNode {
         return uncov.isEmpty();
     }
 
-    boolean isGlobalMinimal() {
+    public boolean isGlobalMinimal() {
         return elements.stream().noneMatch(e -> crit.get(e).isEmpty());
     }
 
@@ -82,30 +83,38 @@ public class BLMMCSNode {
         return childNode;
     }
 
-    public BLMMCSNode getParentNode(int e) {
+    public boolean parentIsCover(int e) {
+        return crit.get(e).isEmpty();
+    }
+
+    public BLMMCSNode getParentNode(int e, List<Set<Subset>> coverMap) {
+        // return nonCoverNode immediately if the parent node is NOT a cover
+        if (!crit.get(e).isEmpty()) {
+            nonCoverNode.elements = (BitSet) elements.clone();
+            nonCoverNode.elements.clear(e);
+            return nonCoverNode;
+        }
+
         BLMMCSNode parentNode = new BLMMCSNode(nElements);
         parentNode.cloneContext(this);
-        parentNode.updateContextFromChild(e, this);
+        parentNode.updateContextFromChild(e, coverMap);
         return parentNode;
     }
 
     void cloneContext(BLMMCSNode parentNode) {
         elements = (BitSet) parentNode.elements.clone();
         crit = new ArrayList<>(parentNode.crit.size());
-        coverMap = new ArrayList<>(parentNode.coverMap.size());
         //uncov = new LinkedList<>();     // different for child and parent
 
         for (int i = 0; i < nElements; i++) {
             crit.add((ArrayList<Subset>) parentNode.crit.get(i).clone());
-            coverMap.add((ArrayList<Subset>) parentNode.coverMap.get(i).clone());
         }
     }
 
-    void updateContextFromChild(int e, BLMMCSNode childNode) {
+    void updateContextFromChild(int e, List<Set<Subset>> coverMap) {
         elements.clear(e);
 
-        uncov = new LinkedList<>(childNode.uncov);
-        uncov.addAll(crit.get(e));
+        uncov = new LinkedList<>();     // uncov is always empty
 
         for (Subset sb : coverMap.get(e)) {
             int critCover = sb.getCritCover(elements);
@@ -113,8 +122,6 @@ public class BLMMCSNode {
         }
 
         crit.get(e).clear();
-
-        coverMap.get(e).clear();
     }
 
     void updateContextFromParent(int e, BLMMCSNode parentNode) {
@@ -122,7 +129,6 @@ public class BLMMCSNode {
                 .filter(F -> {
                     if (!F.hasElement(e)) return true;
                     crit.get(e).add(F);
-                    coverMap.get(e).add(F);
                     return false;
                 })
                 .collect(Collectors.toCollection(LinkedList::new));
@@ -141,22 +147,20 @@ public class BLMMCSNode {
             intersec.and(newSubset.elements);
 
             if (intersec.isEmpty()) uncov.add(newSubset);
-            else intersec.stream().forEach(e -> coverMap.get(e).add(newSubset));
             if (intersec.cardinality() == 1) crit.get(intersec.nextSetBit(0)).add(newSubset);
         }
     }
 
     public void removeSubsets(List<Subset> removedSubsets) {
         // TODO: run some tests in advance
+        Set<Integer> removedBitsets = removedSubsets.stream().map(Subset::hashCode).collect(Collectors.toSet());
         for (Subset removedSubset : removedSubsets) {
             BitSet t = (BitSet) elements.clone();
             t.and(removedSubset.elements);
             t.stream().forEach(e -> {
-                crit.get(e).remove(removedSubset);
-                coverMap.get(e).remove(removedSubset);
+                crit.get(e).removeIf(sb -> removedBitsets.contains(sb.hashCode()));
             });
         }
     }
 
-    // TODO: rewrite hashCode and equals
 }

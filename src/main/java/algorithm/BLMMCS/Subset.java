@@ -30,7 +30,20 @@ public class Subset {
         return intersec.cardinality() == 1 ? intersec.nextSetBit(0) : -1;
     }
 
-    // TODO: rewrite hashCode and equals
+    public IntStream getElements() {
+        return elements.stream();
+    }
+
+    @Override
+    public int hashCode() {
+        return elements.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Subset && ((Subset) obj).elements.equals(elements);
+    }
+
 
 //    BitSet elements;
 //    /**

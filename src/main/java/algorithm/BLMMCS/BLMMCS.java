@@ -22,7 +22,7 @@ public class BLMMCS {
     /**
      * hitting sets that are minimal on its local branch
      */
-    private List<BLMMCSNode> BLMMCSNodes = new ArrayList<>();
+    private List<BLMMCSNode> BLMMCSNodes;
 
     /**
      * record nodes that have been walked down in a batch, by the hashCode of its elements
@@ -32,62 +32,59 @@ public class BLMMCS {
     /**
      * record nodes that have been walked up in a batch, by the hashCode of its elements
      */
-    private Map<Integer, Boolean> walkedUp;
+    private Set<Integer> walkedUp;
 
-    private boolean walkDownLastTime = true;
+    /**
+     * coverMap[i]: subsets covered by element i
+     */
+    List<Set<Subset>> coverMap;
 
     public BLMMCS(int nEle, List<BitSet> toCover) {
         nElements = nEle;
         subsetsToCover = toCover.stream().map(Subset::new).collect(Collectors.toCollection(ArrayList::new));
         BLMMCSNodes = new ArrayList<>();
         walkedDown = new HashSet<>();
-        walkedUp = new HashMap<>();
-    }
+        walkedUp = new HashSet<>();
+        coverMap = new ArrayList<>();
 
-    public List<BitSet> getGlobalMinCoverSets() {
-        return BLMMCSNodes.stream()
-                .filter(BLMMCSNode::isGlobalMinimal)
-                .map(BLMMCSNode::getElements)
-                .collect(Collectors.toList());
-    }
-
-    public List<BLMMCSNode> getAllCoverSets() {
-        return BLMMCSNodes;
+        for (int i = 0; i < nElements; i++) {
+            coverMap.add(new HashSet<>());
+        }
+        for (Subset sb : subsetsToCover) {
+            sb.getElements().forEach(e -> coverMap.get(e).add(sb));
+        }
     }
 
     public void initiate() {
         BitSet S = new BitSet(nElements);
         LinkedList<Subset> uncov = new LinkedList<>(subsetsToCover);
         ArrayList<ArrayList<Subset>> crit = new ArrayList<>(nElements);
-        ArrayList<ArrayList<Subset>> coverMap = new ArrayList<>(nElements);
 
         for (int i = 0; i < nElements; i++) {
             crit.add(new ArrayList<>());
-            coverMap.add(new ArrayList<>());
         }
 
-        BLMMCSNode emptyCover = new BLMMCSNode(nElements, S, uncov, crit, coverMap);
+        BLMMCSNode emptyCover = new BLMMCSNode(nElements, S, uncov, crit);
         walkDown(emptyCover, BLMMCSNodes);
 
-        walkDownLastTime = true;
     }
 
     /**
      * down from S, find all locally minimal cover sets that are minimal on its local branch
      */
-    public void walkDown(BLMMCSNode S, List<BLMMCSNode> res) {
+    public void walkDown(BLMMCSNode S, List<BLMMCSNode> newNodes) {
         if (walkedDown.contains(S.hashCode())) return;
         walkedDown.add(S.hashCode());
 
         if (S.isCover()) {
-            res.add(S);
+            newNodes.add(S);
             return;
         }
 
         // TODO: prune: remove an ele from S and check whether it's been walked?
         S.getAddCandidates().forEach(e -> {
             BLMMCSNode childS = S.getChildNode(e);
-            walkDown(childS, res);
+            walkDown(childS, newNodes);
         });
     }
 
@@ -104,52 +101,75 @@ public class BLMMCS {
         }
 
         BLMMCSNodes = newCoverSets;
-        walkDownLastTime = true;
     }
 
     /**
-     * keep Node S IF
-     * 1. S is a cover, and
-     * 2. S is global minimal or S has non-cover parents
-     *
-     * @return true IFF S is a cover
+     * keep Node S if S
+     * 1. is a cover, and
+     * 2. is global minimal or has non-cover parents
      */
     // TODO: will walkUp prune some branches?
-    public boolean walkUp(BLMMCSNode S, List<BLMMCSNode> res) {
-        if (walkedUp.containsKey(S.hashCode())) return walkedUp.get(S.hashCode());
-        walkedUp.put(S.hashCode(), S.isCover());
+    public void walkUp(BLMMCSNode S, List<BLMMCSNode> newNodes) {
+        if (!S.isCover() || walkedUp.contains(S.hashCode())) return;
 
-        if (!S.isCover()) return false;
+        walkedUp.add(S.hashCode());
 
         if (S.isGlobalMinimal()) {
-            res.add(S);
-            return true;
+            newNodes.add(S);
+            return;
         }
 
-        boolean hasNonCoverParen = S.getRemoveCandidates()
-                .mapToObj(e -> walkUp(S.getParentNode(e), res))
-                .reduce(false, Boolean::logicalOr);
+        // walk up and check whether all parents are covers
+        boolean hasNonCoverParent = false;
+        PrimitiveIterator.OfInt it = S.getRemoveCandidates().iterator();
 
-        if (hasNonCoverParen) res.add(S);
+        while (it.hasNext()) {
+            int e = it.nextInt();
+            if (S.parentIsCover(e)) walkUp(S.getParentNode(e, coverMap), newNodes);
+            else hasNonCoverParent = true;
+        }
 
-        return true;
+        if (hasNonCoverParent) newNodes.add(S);
     }
 
     public void processRemovedSubsets(List<BitSet> removedSets) {
+        long startTime1 = System.nanoTime();
         walkedUp.clear();
         List<Subset> removedSubsets = removedSets.stream().map(Subset::new).collect(Collectors.toList());
-        //subsetsToCover.removeAll(removedSets);     // TODO: rewrite equals and hashCode?
 
-        List<BLMMCSNode> newCoverSets = new ArrayList<>();
-        for (BLMMCSNode prevNode : BLMMCSNodes) {
-            prevNode.removeSubsets(removedSubsets);
-            walkUp(prevNode, newCoverSets);
+        for (Subset removedSb : removedSubsets) {
+            removedSb.getElements().forEach(e -> coverMap.get(e).remove(removedSb));
         }
 
-        BLMMCSNodes = newCoverSets;
-        walkDownLastTime = false;
+        List<BLMMCSNode> currNodes = new ArrayList<>();
+        for (BLMMCSNode prevNode : BLMMCSNodes) {
+            prevNode.removeSubsets(removedSubsets);
+        }
+        long endTime1 = System.nanoTime();
+        System.out.println("runtime 1 for letter_remove : " + (endTime1 - startTime1) / 1000000 + "ms");
+
+        long startTime2 = System.nanoTime();
+        for (BLMMCSNode prevNode : BLMMCSNodes) {
+            walkUp(prevNode, currNodes);
+        }
+        long endTime2 = System.nanoTime();
+        System.out.println("runtime 2 for letter_remove : " + (endTime2 - startTime2) / 1000000 + "ms");
+
+        BLMMCSNodes = currNodes;
     }
 
+    public List<BitSet> getGlobalMinCoverSets() {
+        return BLMMCSNodes.stream()
+                .filter(BLMMCSNode::isGlobalMinimal)
+                .map(BLMMCSNode::getElements)
+                .collect(Collectors.toList());
+    }
+
+    public List<BitSet> getAllCoverSets() {
+        return BLMMCSNodes.stream()
+                .map(BLMMCSNode::getElements)
+                .collect(Collectors.toList());
+    }
 
 
 

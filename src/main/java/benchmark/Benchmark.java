@@ -39,10 +39,10 @@ public class Benchmark {
             printMinCoverSets("dataFiles\\letterFD.txt", blmmcsList, i);
         }
 
-
+        System.out.println("Start removing...");
         Map<BitSet, Integer> yyaDs_15000 = DataLoader.readYyaDiffSets("dataFiles\\letter_15000_DS_yya.txt");
-        List<BitSet> removedDiffSets = yya_Ds.keySet().stream()
-                .filter(ds -> !yyaDs_15000.containsKey(ds)).collect(Collectors.toList());
+        List<BitSet> removedDiffSets = yya_Ds.keySet().stream().filter(ds -> !yyaDs_15000.containsKey(ds)).collect(Collectors.toList());
+        // List<BitSet> removedDiffSets = new ArrayList<>();
         for (int i = 0; i < 1; i++) {
             List<BitSet> removedDiffSetsOnI = generateDiffSetsOnAttrI(removedDiffSets, i);
 
@@ -50,7 +50,7 @@ public class Benchmark {
             long startTime = System.nanoTime();
             blmmcsList.get(i).processRemovedSubsets(removedDiffSetsOnI);
             long endTime = System.nanoTime();
-            System.out.println("runtime for letter_remove on attribute " + i + ": " + (endTime - startTime) / 1000000 + "ms");
+            System.out.println("runtime total for letter_remove on attribute " + i + ": " + (endTime - startTime) / 1000000 + "ms");
 
             printMinCoverSets("dataFiles\\letter_15000_FD.txt", blmmcsList, i);
         }
