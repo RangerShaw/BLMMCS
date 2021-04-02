@@ -31,10 +31,11 @@ public class Benchmark {
         List<BitSet> diffSetsAll = new ArrayList<>(yya_Ds.keySet()); // diff sets on all attributes
         for (int i = 0; i < 1; i++) {
             List<BitSet> diffSets = generateDiffSetsOnAttrI(diffSetsAll, i);
-            blmmcsList.add(new BLMMCS(nAttributes, diffSets));
+
+            blmmcsList.add(new BLMMCS(nAttributes));
 
             System.out.println("initiating blmmcs for letter on attribute " + i + "...");
-            blmmcsList.get(i).initiate();
+            blmmcsList.get(i).initiate(diffSets);
 
             printMinCoverSets("dataFiles\\letterFD.txt", blmmcsList, i);
         }
@@ -42,7 +43,6 @@ public class Benchmark {
         System.out.println("Start removing...");
         Map<BitSet, Integer> yyaDs_15000 = DataLoader.readYyaDiffSets("dataFiles\\letter_15000_DS_yya.txt");
         List<BitSet> removedDiffSets = yya_Ds.keySet().stream().filter(ds -> !yyaDs_15000.containsKey(ds)).collect(Collectors.toList());
-        // List<BitSet> removedDiffSets = new ArrayList<>();
         for (int i = 0; i < 1; i++) {
             List<BitSet> removedDiffSetsOnI = generateDiffSetsOnAttrI(removedDiffSets, i);
 
@@ -54,8 +54,6 @@ public class Benchmark {
 
             printMinCoverSets("dataFiles\\letter_15000_FD.txt", blmmcsList, i);
         }
-
-
     }
 
     public static void testAdd(int nAttributes) {
@@ -68,10 +66,10 @@ public class Benchmark {
         List<BitSet> diffSetsAll = new ArrayList<>(yyaDs_15000.keySet()); // diff sets on all attributes
         for (int i = 0; i < 1; i++) {
             List<BitSet> diffSets = generateDiffSetsOnAttrI(diffSetsAll, i);
-            blmmcsList.add(new BLMMCS(nAttributes, diffSets));
+            blmmcsList.add(new BLMMCS(nAttributes));
 
             System.out.println("initiating blmmcs for letter_15000 on attribute " + i + "...");
-            blmmcsList.get(i).initiate();
+            blmmcsList.get(i).initiate(diffSets);
 
             printMinCoverSets("dataFiles\\letter_15000_FD.txt", blmmcsList, i);
         }

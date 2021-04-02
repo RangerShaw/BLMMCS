@@ -4,18 +4,20 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * each BLMMCSNode corresponds uniquely with a set of elements
+ * which is an intermediate (potentially) cover set
+ */
 public class BLMMCSNode {
-
-    private static BLMMCSNode nonCoverNode;
 
     private int nElements;
 
     private BitSet elements;
 
     /**
-     * lots of remove operation
+     * uncovered subsets
      */
-    private LinkedList<Subset> uncov;
+    private List<Subset> uncov;
 
     /**
      * crit[i]: subsets for which element i is crucial
@@ -26,20 +28,22 @@ public class BLMMCSNode {
         nElements = nEle;
     }
 
-    public BLMMCSNode(int nEle, BitSet elements, LinkedList<Subset> uncov, ArrayList<ArrayList<Subset>> crit) {
+    /**
+     * for initiation only
+     */
+    public BLMMCSNode(int nEle, List<Subset> subsetsToCover) {
         nElements = nEle;
-        this.elements = elements;
-        this.uncov = uncov;
-        this.crit = crit;
+        elements = new BitSet(nElements);
+        uncov = new ArrayList<>(subsetsToCover);
+        crit = new ArrayList<>(nElements);
 
-        nonCoverNode = new BLMMCSNode(nElements);
-        nonCoverNode.elements = new BitSet();
-        nonCoverNode.uncov = new LinkedList<>();
-        nonCoverNode.uncov.add(new Subset(new BitSet()));
+        for (int i = 0; i < nElements; i++) {
+            crit.add(new ArrayList<>());
+        }
     }
 
     public BitSet getElements() {
-        return elements;
+        return (BitSet) elements.clone();
     }
 
     boolean isCover() {
@@ -50,8 +54,14 @@ public class BLMMCSNode {
         return elements.stream().noneMatch(e -> crit.get(e).isEmpty());
     }
 
+    @Override
     public int hashCode() {
         return elements.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof BLMMCSNode && ((BLMMCSNode) obj).elements.equals(elements);
     }
 
     /**
@@ -60,7 +70,7 @@ public class BLMMCSNode {
      */
     public IntStream getAddCandidates() {
         BitSet cand = ((BitSet) elements.clone());
-        cand.flip(0, cand.size());
+        cand.flip(0, nElements);
 
         Comparator<Subset> cmp = Comparator.comparing(sb -> {
             BitSet t = ((BitSet) cand.clone());
@@ -69,6 +79,7 @@ public class BLMMCSNode {
         });
 
         cand.and(Collections.max(uncov, cmp).elements);
+
         return cand.stream();
     }
 
@@ -83,38 +94,33 @@ public class BLMMCSNode {
         return childNode;
     }
 
+    /**
+     * true iff the parent without e is still a cover
+     */
     public boolean parentIsCover(int e) {
         return crit.get(e).isEmpty();
     }
 
     public BLMMCSNode getParentNode(int e, List<Set<Subset>> coverMap) {
-        // return nonCoverNode immediately if the parent node is NOT a cover
-        if (!crit.get(e).isEmpty()) {
-            nonCoverNode.elements = (BitSet) elements.clone();
-            nonCoverNode.elements.clear(e);
-            return nonCoverNode;
-        }
-
         BLMMCSNode parentNode = new BLMMCSNode(nElements);
         parentNode.cloneContext(this);
         parentNode.updateContextFromChild(e, coverMap);
         return parentNode;
     }
 
-    void cloneContext(BLMMCSNode parentNode) {
-        elements = (BitSet) parentNode.elements.clone();
-        crit = new ArrayList<>(parentNode.crit.size());
-        //uncov = new LinkedList<>();     // different for child and parent
+    void cloneContext(BLMMCSNode originalNode) {
+        elements = (BitSet) originalNode.elements.clone();
 
+        crit = new ArrayList<>(nElements);
         for (int i = 0; i < nElements; i++) {
-            crit.add((ArrayList<Subset>) parentNode.crit.get(i).clone());
+            crit.add((ArrayList<Subset>) originalNode.crit.get(i).clone());
         }
     }
 
     void updateContextFromChild(int e, List<Set<Subset>> coverMap) {
         elements.clear(e);
 
-        uncov = new LinkedList<>();     // uncov is always empty
+        uncov = new ArrayList<>();      // always empty
 
         for (Subset sb : coverMap.get(e)) {
             int critCover = sb.getCritCover(elements);
@@ -125,13 +131,12 @@ public class BLMMCSNode {
     }
 
     void updateContextFromParent(int e, BLMMCSNode parentNode) {
-        uncov = parentNode.uncov.stream()
-                .filter(F -> {
-                    if (!F.hasElement(e)) return true;
-                    crit.get(e).add(F);
-                    return false;
-                })
-                .collect(Collectors.toCollection(LinkedList::new));
+        uncov = new ArrayList<>(parentNode.uncov.size() / 2);
+
+        for (Subset sb : parentNode.uncov) {
+            if (sb.hasElement(e)) crit.get(e).add(sb);
+            else uncov.add(sb);
+        }
 
         elements.stream().forEach(u -> {
             crit.get(u).removeIf(F -> F.hasElement(e));
@@ -140,9 +145,8 @@ public class BLMMCSNode {
         elements.set(e);
     }
 
-    public void addSubsets(List<Subset> addedSubsets) {
-        // TODO: run some tests in advance
-        for (Subset newSubset : addedSubsets) {
+    public void addSubsets(List<Subset> newSubsets) {
+        for (Subset newSubset : newSubsets) {
             BitSet intersec = (BitSet) elements.clone();
             intersec.and(newSubset.elements);
 
@@ -151,15 +155,9 @@ public class BLMMCSNode {
         }
     }
 
-    public void removeSubsets(List<Subset> removedSubsets) {
-        // TODO: run some tests in advance
-        Set<Integer> removedBitsets = removedSubsets.stream().map(Subset::hashCode).collect(Collectors.toSet());
-        for (Subset removedSubset : removedSubsets) {
-            BitSet t = (BitSet) elements.clone();
-            t.and(removedSubset.elements);
-            t.stream().forEach(e -> {
-                crit.get(e).removeIf(sb -> removedBitsets.contains(sb.hashCode()));
-            });
+    public void removeSubsets(Set<Subset> removedBitSets) {
+        for(ArrayList<Subset> critSubsets : crit) {
+            critSubsets.removeIf(removedBitSets::contains);
         }
     }
 
