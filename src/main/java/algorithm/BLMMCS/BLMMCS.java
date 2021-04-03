@@ -1,5 +1,7 @@
 package algorithm.BLMMCS;
 
+import util.Utils;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -139,12 +141,14 @@ public class BLMMCS {
         return BLMMCSNodes.stream()
                 .filter(BLMMCSNode::isGlobalMinimal)
                 .map(BLMMCSNode::getElements)
+                .sorted(Utils.bsComparator())
                 .collect(Collectors.toList());
     }
 
     public List<BitSet> getAllCoverSets() {
         return BLMMCSNodes.stream()
                 .map(BLMMCSNode::getElements)
+                .sorted(Utils.bsComparator())
                 .collect(Collectors.toList());
     }
 

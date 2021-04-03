@@ -78,7 +78,7 @@ public class BLMMCSNode {
             return t.cardinality();
         });
 
-        cand.and(Collections.max(uncov, cmp).elements);
+        cand.and(Collections. max(uncov, cmp).elements);
 
         return cand.stream();
     }
@@ -146,12 +146,12 @@ public class BLMMCSNode {
     }
 
     public void addSubsets(List<Subset> newSubsets) {
-        for (Subset newSubset : newSubsets) {
+        for (Subset newSb : newSubsets) {
             BitSet intersec = (BitSet) elements.clone();
-            intersec.and(newSubset.elements);
+            intersec.and(newSb.elements);
 
-            if (intersec.isEmpty()) uncov.add(newSubset);
-            if (intersec.cardinality() == 1) crit.get(intersec.nextSetBit(0)).add(newSubset);
+            if (intersec.isEmpty()) uncov.add(newSb);
+            if (intersec.cardinality() == 1) crit.get(intersec.nextSetBit(0)).add(newSb);
         }
     }
 
