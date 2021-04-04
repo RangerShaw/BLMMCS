@@ -16,22 +16,22 @@ public class BLMMCS {
     private int nElements;
 
     /**
-     * hitting sets that are minimal on its local branch
+     * cover sets that are minimal on its local branch
      */
     private List<BLMMCSNode> BLMMCSNodes = new ArrayList<>();
 
     /**
-     * record nodes that have been walked down in a batch, by the hashCode of its elements
+     * nodes that have been walked down during current iteration, by the hashCode of its elements
      */
     private Set<Integer> walkedDown = new HashSet<>();
 
     /**
-     * record nodes that have been walked up in a batch, by the hashCode of its elements
+     * nodes that have been walked up during current iteration, by the hashCode of its elements
      */
     private Set<Integer> walkedUp = new HashSet<>();
 
     /**
-     * coverMap[i]: subsets covered by element i
+     * coverMap[e]: subsets with element e
      */
     List<Set<Subset>> coverMap = new ArrayList<>();
 
@@ -47,7 +47,7 @@ public class BLMMCS {
         List<Subset> subsetsToCover = toCover.stream().map(Subset::new).collect(Collectors.toList());
 
         for (Subset sb : subsetsToCover) {
-            sb.getElements().forEach(e -> coverMap.get(e).add(sb));
+            sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
         }
 
         BLMMCSNode initNode = new BLMMCSNode(nElements, subsetsToCover);
@@ -58,7 +58,7 @@ public class BLMMCS {
     /**
      * down from nd, find all locally minimal cover sets that are minimal on its local branch
      */
-    public void walkDown(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
+    void walkDown(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
         if (walkedDown.contains(nd.hashCode())) return;
         walkedDown.add(nd.hashCode());
 
@@ -80,7 +80,7 @@ public class BLMMCS {
 
         List<Subset> addedSubsets = addedSets.stream().map(Subset::new).collect(Collectors.toList());
         for (Subset sb : addedSubsets) {
-            sb.getElements().forEach(e -> coverMap.get(e).add(sb));
+            sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
@@ -93,9 +93,7 @@ public class BLMMCS {
     }
 
     /**
-     * keep Node S if S
-     * 1. is a cover, and
-     * 2. is global minimal or has non-cover parents
+     * keep node S if (S is a cover) and (S is global minimal or has non-cover parents)
      */
     public void walkUp(BLMMCSNode S, List<BLMMCSNode> newNodes) {
         if (!S.isCover() || walkedUp.contains(S.hashCode())) return;
@@ -107,7 +105,6 @@ public class BLMMCS {
             return;
         }
 
-        // walk up and check whether all parents are covers
         boolean hasNonCoverParent = false;
 
         PrimitiveIterator.OfInt it = S.getRemoveCandidates().iterator();
@@ -125,30 +122,30 @@ public class BLMMCS {
 
         Set<Subset> removedSubsets = removedSets.stream().map(Subset::new).collect(Collectors.toSet());
         for (Subset removedSb : removedSubsets) {
-            removedSb.getElements().forEach(e -> coverMap.get(e).remove(removedSb));
+            removedSb.getEleStream().forEach(e -> coverMap.get(e).remove(removedSb));
         }
 
-        List<BLMMCSNode> currNodes = new ArrayList<>();
+        List<BLMMCSNode> newCoverSets = new ArrayList<>();
         for (BLMMCSNode prevNode : BLMMCSNodes) {
             prevNode.removeSubsets(removedSubsets);
-            walkUp(prevNode, currNodes);
+            walkUp(prevNode, newCoverSets);
         }
 
-        BLMMCSNodes = currNodes;
+        BLMMCSNodes = newCoverSets;
     }
 
     public List<BitSet> getGlobalMinCoverSets() {
         return BLMMCSNodes.stream()
                 .filter(BLMMCSNode::isGlobalMinimal)
                 .map(BLMMCSNode::getElements)
-                .sorted(Utils.bsComparator())
+                .sorted(Utils.BitsetComparator())
                 .collect(Collectors.toList());
     }
 
     public List<BitSet> getAllCoverSets() {
         return BLMMCSNodes.stream()
                 .map(BLMMCSNode::getElements)
-                .sorted(Utils.bsComparator())
+                .sorted(Utils.BitsetComparator())
                 .collect(Collectors.toList());
     }
 

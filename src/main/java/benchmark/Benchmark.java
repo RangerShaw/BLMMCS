@@ -1,6 +1,6 @@
 package benchmark;
 
-import algorithm.BLMMCS.BLMMCS;
+import algorithm.BLMMCS.BLMMCSAlgo;
 import algorithm.differenceSet.PLI;
 import util.DataLoader;
 
@@ -10,111 +10,107 @@ import java.util.stream.Collectors;
 
 public class Benchmark {
 
+    static String[] CSV_IN_FULL = new String[]{
+            "dataFiles\\letter\\letter.csv",
+            "dataFiles\\balance\\balance-scale.csv"
+    };
+    static String[] DS_IN_FULL = new String[]{
+            "dataFiles\\letter\\letterDS_yya.txt",
+            "dataFiles\\balance\\balance-scale.txt"
+    };
+    static String[] DS_IN_PART = new String[]{
+            "dataFiles\\letter\\letter_15000_DS_yya.txt",
+            "dataFiles\\balance\\balance-scale100.txt"
+    };
+    static String[] FD_OUT_FULL = new String[]{
+            "dataFiles\\letter\\letterFD.txt",
+            "dataFiles\\balance\\balance-scale_FD.txt"
+    };
+    static String[] FD_OUT_PART = new String[]{
+            "dataFiles\\letter\\letter_15000_FD.txt",
+            "dataFiles\\balance\\balance-scale100_FD.txt"
+    };
+
+    static int dataset = 0;
+
+
     public static void main(String[] args) {
         // load data
-        String DATA_FILE_PATH = "dataFiles\\letter.csv";
-        List<List<String>> csvData = DataLoader.readCsvFile(DATA_FILE_PATH);
+        List<List<String>> csvData = DataLoader.readCsvFile(CSV_IN_FULL[dataset]);
 
         // initiate pli and differenceSet
         PLI pli = new PLI(csvData);
-        // pli.generatePLI();
+        pli.generatePLI();
         // List<BitSet> diffSetsAll = pli.generateDiffSets();
 
-        //testAdd(pli.nAttributes);
-        testRemove(pli.nAttributes);
+
+        BLMMCSAlgo blmmcsAlgo = new BLMMCSAlgo(pli.nAttributes);
+
+        // testRemove(blmmcsAlgo);
+        testAdd(blmmcsAlgo);
     }
 
-    public static void testRemove(int nAttributes) {
-        List<BLMMCS> blmmcsList = new ArrayList<>();
+    public static void testRemove(BLMMCSAlgo blmmcsAlgo) {
+        Map<BitSet, Integer> diffSetsMap = DataLoader.readYyaDiffSets(DS_IN_FULL[dataset]);
+        List<BitSet> diffSets = new ArrayList<>(diffSetsMap.keySet()); // diff sets on all attributes
 
-        Map<BitSet, Integer> yya_Ds = DataLoader.readYyaDiffSets("dataFiles\\letterDS_yya.txt");
-        List<BitSet> diffSetsAll = new ArrayList<>(yya_Ds.keySet()); // diff sets on all attributes
-        for (int i = 0; i < 1; i++) {
-            List<BitSet> diffSets = generateDiffSetsOnAttrI(diffSetsAll, i);
+        System.out.println("initiating BLMMCS...");
+        long startTime1 = System.nanoTime();
+        blmmcsAlgo.initiate(diffSets);
+        long endTime1 = System.nanoTime();
+        System.out.println("initiating runtime: " + (endTime1 - startTime1) / 1000000 + "ms");
 
-            blmmcsList.add(new BLMMCS(nAttributes));
+        printFDs(blmmcsAlgo, FD_OUT_FULL[dataset]);
 
-            System.out.println("initiating blmmcs for letter on attribute " + i + "...");
-            blmmcsList.get(i).initiate(diffSets);
 
-            printMinCoverSets("dataFiles\\letterFD.txt", blmmcsList, i);
-        }
+        Map<BitSet, Integer> currDiffSetsMap = DataLoader.readYyaDiffSets(DS_IN_PART[dataset]);
+        List<BitSet> removedDiffSets = diffSetsMap.keySet().stream()
+                .filter(ds -> !currDiffSetsMap.containsKey(ds)).collect(Collectors.toList());
 
-        System.out.println("Start removing...");
-        Map<BitSet, Integer> yyaDs_15000 = DataLoader.readYyaDiffSets("dataFiles\\letter_15000_DS_yya.txt");
-        List<BitSet> removedDiffSets = yya_Ds.keySet().stream().filter(ds -> !yyaDs_15000.containsKey(ds)).collect(Collectors.toList());
-        for (int i = 0; i < 1; i++) {
-            List<BitSet> removedDiffSetsOnI = generateDiffSetsOnAttrI(removedDiffSets, i);
+        System.out.println("start removing...");
+        long startTime = System.nanoTime();
+        blmmcsAlgo.processRemovedSubsets(removedDiffSets);
+        long endTime = System.nanoTime();
+        System.out.println("total runtime of REMOVE: " + (endTime - startTime) / 1000000 + "ms");
 
-            System.out.println("running blmmcs for letter_remove on attribute " + i + "...");
-            long startTime = System.nanoTime();
-            blmmcsList.get(i).processRemovedSubsets(removedDiffSetsOnI);
-            long endTime = System.nanoTime();
-            System.out.println("runtime total for letter_remove on attribute " + i + ": " + (endTime - startTime) / 1000000 + "ms");
-
-            printMinCoverSets("dataFiles\\letter_15000_FD.txt", blmmcsList, i);
-        }
+        printFDs(blmmcsAlgo, FD_OUT_PART[dataset]);
     }
 
-    public static void testAdd(int nAttributes) {
-//        Set<BitSet> myDs = DataLoader.readDiffSets("dataFiles\\letterDS.txt");
-//        List<BitSet> diffSetsAll = new ArrayList<>(myDs);
+    public static void testAdd(BLMMCSAlgo blmmcsAlgo) {
+        Map<BitSet, Integer> diffSetsMap = DataLoader.readYyaDiffSets(DS_IN_PART[dataset]);
+        List<BitSet> diffSets = new ArrayList<>(diffSetsMap.keySet()); // diff sets on all attributes
 
-        List<BLMMCS> blmmcsList = new ArrayList<>();
+        System.out.println("initiating BLMMCS...");
+        blmmcsAlgo.initiate(diffSets);
 
-        Map<BitSet, Integer> yyaDs_15000 = DataLoader.readYyaDiffSets("dataFiles\\letter_15000_DS_yya.txt");
-        List<BitSet> diffSetsAll = new ArrayList<>(yyaDs_15000.keySet()); // diff sets on all attributes
-        for (int i = 0; i < 1; i++) {
-            List<BitSet> diffSets = generateDiffSetsOnAttrI(diffSetsAll, i);
-            blmmcsList.add(new BLMMCS(nAttributes));
-
-            System.out.println("initiating blmmcs for letter_15000 on attribute " + i + "...");
-            blmmcsList.get(i).initiate(diffSets);
-
-            printMinCoverSets("dataFiles\\letter_15000_FD.txt", blmmcsList, i);
-        }
+        printFDs(blmmcsAlgo, FD_OUT_PART[dataset]);
 
 
-        Map<BitSet, Integer> yya_Ds = DataLoader.readYyaDiffSets("dataFiles\\letterDS_yya.txt");
-        List<BitSet> addedDiffSets = yya_Ds.keySet().stream()
-                .filter(ds -> !yyaDs_15000.containsKey(ds)).collect(Collectors.toList());
-        for (int i = 0; i < 1; i++) {
-            List<BitSet> newDiffSets = generateDiffSetsOnAttrI(addedDiffSets, i);
+        Map<BitSet, Integer> currDiffSetsMap = DataLoader.readYyaDiffSets(DS_IN_FULL[dataset]);
+        List<BitSet> addedDiffSets = currDiffSetsMap.keySet().stream()
+                .filter(ds -> !diffSetsMap.containsKey(ds)).collect(Collectors.toList());
 
-            System.out.println("running blmmcs for letter_add on attribute " + i + "...");
-            long startTime = System.nanoTime();
-            blmmcsList.get(i).processAddedSubsets(newDiffSets);
-            long endTime = System.nanoTime();
-            System.out.println("runtime for letter_add on attribute " + i + ": " + (endTime - startTime) / 1000000 + "ms");
+        System.out.println("start adding...");
+        long startTime = System.nanoTime();
+        blmmcsAlgo.processAddedSubsets(addedDiffSets);
+        long endTime = System.nanoTime();
+        System.out.println("total runtime of ADD: " + (endTime - startTime) / 1000000 + "ms");
 
-            printMinCoverSets("dataFiles\\letterFD.txt", blmmcsList, i);
-        }
-
+        printFDs(blmmcsAlgo, FD_OUT_FULL[dataset]);
     }
 
-    public static List<BitSet> generateDiffSetsOnAttrI(List<BitSet> diffSets, int i) {
-        // TODO: what if a new dsI is empty or an existing empty dsI is removed:
-        //  return empty coverSets, but run blmmcs without the empty dsI
-        List<BitSet> diffSetsOnI = new ArrayList<>();
-        for (BitSet ds : diffSets) {
-            if (ds.get(i)) {
-                BitSet dsI = (BitSet) ds.clone();
-                dsI.clear(i);
-                diffSetsOnI.add(dsI);
+    public static void printFDs(BLMMCSAlgo blmmcsAlgo, String writeFilePath) {
+        List<List<BitSet>> fd = blmmcsAlgo.getMinimalCoverSets();
+        for (int i = 0; i < fd.size(); i++) {
+            try {
+                PrintWriter pw = new PrintWriter(new FileWriter(writeFilePath, true));
+                pw.println("FDs for attr " + i);
+                fd.get(i).forEach(pw::println);
+                pw.println();
+                pw.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }
-        return diffSetsOnI;
-    }
-
-    public static void printMinCoverSets(String writeFilePath, List<BLMMCS> blmmcsList, int i) {
-        try {
-            PrintWriter pw = new PrintWriter(new FileWriter(writeFilePath, true));
-            pw.println();
-            pw.println("FDs for attr " + i);
-            blmmcsList.get(i).getGlobalMinCoverSets().forEach(pw::println);
-            pw.close();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 }

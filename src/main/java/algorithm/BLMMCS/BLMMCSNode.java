@@ -1,7 +1,6 @@
 package algorithm.BLMMCS;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -42,6 +41,16 @@ public class BLMMCSNode {
         }
     }
 
+    @Override
+    public int hashCode() {
+        return elements.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof BLMMCSNode && ((BLMMCSNode) obj).elements.equals(elements);
+    }
+
     public BitSet getElements() {
         return (BitSet) elements.clone();
     }
@@ -54,16 +63,6 @@ public class BLMMCSNode {
         return elements.stream().noneMatch(e -> crit.get(e).isEmpty());
     }
 
-    @Override
-    public int hashCode() {
-        return elements.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof BLMMCSNode && ((BLMMCSNode) obj).elements.equals(elements);
-    }
-
     /**
      * find an uncovered subset with the largest intersection with cand,
      * return its intersection with cand
@@ -72,13 +71,18 @@ public class BLMMCSNode {
         BitSet cand = ((BitSet) elements.clone());
         cand.flip(0, nElements);
 
+        // TODO: remove max will speed up but cause wrong result in REMOVE
+/*
         Comparator<Subset> cmp = Comparator.comparing(sb -> {
             BitSet t = ((BitSet) cand.clone());
             t.and(sb.elements);
             return t.cardinality();
         });
 
-        cand.and(Collections. max(uncov, cmp).elements);
+        cand.and(Collections.max(uncov, cmp).elements);
+*/
+
+        cand.and(uncov.get(0).elements);
 
         return cand.stream();
     }
@@ -101,13 +105,6 @@ public class BLMMCSNode {
         return crit.get(e).isEmpty();
     }
 
-    public BLMMCSNode getParentNode(int e, List<Set<Subset>> coverMap) {
-        BLMMCSNode parentNode = new BLMMCSNode(nElements);
-        parentNode.cloneContext(this);
-        parentNode.updateContextFromChild(e, coverMap);
-        return parentNode;
-    }
-
     void cloneContext(BLMMCSNode originalNode) {
         elements = (BitSet) originalNode.elements.clone();
 
@@ -117,6 +114,9 @@ public class BLMMCSNode {
         }
     }
 
+    /**
+     * general version of BLMMCS for simply discovering cover sets
+     */
     void updateContextFromChild(int e, List<Set<Subset>> coverMap) {
         elements.clear(e);
 
@@ -129,6 +129,14 @@ public class BLMMCSNode {
 
         crit.get(e).clear();
     }
+
+    public BLMMCSNode getParentNode(int e, List<Set<Subset>> coverMap) {
+        BLMMCSNode parentNode = new BLMMCSNode(nElements);
+        parentNode.cloneContext(this);
+        parentNode.updateContextFromChild(e, coverMap);
+        return parentNode;
+    }
+
 
     void updateContextFromParent(int e, BLMMCSNode parentNode) {
         uncov = new ArrayList<>(parentNode.uncov.size() / 2);
@@ -156,9 +164,10 @@ public class BLMMCSNode {
     }
 
     public void removeSubsets(Set<Subset> removedBitSets) {
-        for(ArrayList<Subset> critSubsets : crit) {
+        for (ArrayList<Subset> critSubsets : crit) {
             critSubsets.removeIf(removedBitSets::contains);
         }
     }
+
 
 }

@@ -1,0 +1,26 @@
+
+FDs for attr 0
+{2, 3, 4}
+
+FDs for attr 1
+
+FDs for attr 2
+
+FDs for attr 3
+
+FDs for attr 4
+
+FDs for attr 0
+{2, 3, 4}
+
+FDs for attr 0
+{2, 3, 4}
+
+FDs for attr 1
+{}
+
+FDs for attr 2
+
+FDs for attr 3
+
+FDs for attr 4

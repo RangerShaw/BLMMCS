@@ -8,7 +8,7 @@ public class Utils {
     /**
      * Compare two BitSets from the lowest bit
      */
-    public static Comparator<BitSet> bsComparator() {
+    public static Comparator<BitSet> BitsetComparator() {
         return (a, b) -> {
             if (a.equals(b)) return 0;
 
