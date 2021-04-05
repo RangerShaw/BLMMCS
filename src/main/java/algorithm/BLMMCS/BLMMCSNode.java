@@ -71,32 +71,9 @@ public class BLMMCSNode {
         return elements.stream().noneMatch(e -> crit.get(e).isEmpty());
     }
 
-    /**
-     * find an uncovered subset with the largest intersection with cand,
-     * return its intersection with cand
-     */
-    public IntStream getAddCandidates() {
-        BitSet cand = ((BitSet) elements.clone());
-        cand.flip(0, nElements);
-
-        // TODO: remove max will speed up but cause wrong result in REMOVE
-        Comparator<Subset> cmp = Comparator.comparing(sb -> {
-            BitSet t = ((BitSet) cand.clone());
-            t.and(sb.elements);
-            return t.cardinality();
-        });
-
-        cand.and(Collections.min(uncov, cmp).elements);
-
-        //cand.and(uncov.get(0).elements);
-
-        return cand.stream();
-    }
-
     public IntStream getAddCandidates(List<Set<Subset>> coverMap) {
         BitSet cand = ((BitSet) elements.clone());
         cand.flip(0, nElements);
-
         return cand.stream().filter(e -> !coverMap.get(e).isEmpty());
     }
 
@@ -182,5 +159,28 @@ public class BLMMCSNode {
         }
     }
 
+
+//    /**
+//     * find an uncovered subset with the largest intersection with cand,
+//     * return its intersection with cand
+//     */
+//    public IntStream getAddCandidates() {
+//        BitSet cand = ((BitSet) elements.clone());
+//        cand.flip(0, nElements);
+//
+//        // TODO: remove max will speed up but cause wrong result in REMOVE
+//        Comparator<Subset> cmp = Comparator.comparing(sb -> {
+//            BitSet t = ((BitSet) cand.clone());
+//            t.and(sb.elements);
+//            return t.cardinality();
+//        });
+//
+//        cand.and(Collections.min(uncov, cmp).elements);
+//
+//        //cand.and(uncov.get(0).elements);
+//
+//        return cand.stream();
+//    }
+//
 
 }

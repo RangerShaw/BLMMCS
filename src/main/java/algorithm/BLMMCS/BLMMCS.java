@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 public class BLMMCS {
 
     /**
-     * number of total elements or size of coverSet or size of subSet
+     * number of total elements or attributes
      */
     private int nElements;
 
@@ -20,6 +20,10 @@ public class BLMMCS {
      */
     private List<BLMMCSNode> BLMMCSNodes = new ArrayList<>();
 
+    /**
+     * true iff there's an empty subset to cover (which could never be covered).
+     * return no cover set if true but walk up or down without the empty subset
+     */
     private boolean hasEmptySubset = false;
 
     /**
@@ -37,6 +41,7 @@ public class BLMMCS {
      */
     List<Set<Subset>> coverMap = new ArrayList<>();
 
+
     public BLMMCS(int nEle) {
         nElements = nEle;
 
@@ -50,13 +55,13 @@ public class BLMMCS {
      */
     public void initiate(List<BitSet> toCover) {
         hasEmptySubset = toCover.stream().anyMatch(BitSet::isEmpty);
-        List<Subset> subsetsToCover = toCover.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toList());
+        List<Subset> subsets = toCover.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toList());
 
-        for (Subset sb : subsetsToCover) {
+        for (Subset sb : subsets) {
             sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
         }
 
-        BLMMCSNode initNode = new BLMMCSNode(nElements, subsetsToCover);
+        BLMMCSNode initNode = new BLMMCSNode(nElements, subsets);
 
         walkDown(initNode, BLMMCSNodes);
     }
@@ -73,54 +78,28 @@ public class BLMMCS {
             return;
         }
 
-        // TODO: prune: remove an ele from nd and check whether it's been walked?
         nd.getAddCandidates(coverMap).forEach(e -> {
             BLMMCSNode childNode = nd.getChildNode(e);
             walkDown(childNode, newNodes);
         });
-
-//        nd.getAddCandidates().forEach(e -> {
-//            BLMMCSNode childNd = nd.getChildNode(e);
-//            walkDown(childNd, newNodes);
-//        });
     }
 
-//    void walkDown(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
-//        if (walked.containsKey(nd.hashCode())) return;
-//        walked.put(nd.hashCode(), nd.isCover());
-//
-//        if(nd.getElements().stream().allMatch(nd::parentIsCover)) return;
-//
-//        if (nd.isCover()) {
-//            newNodes.add(nd);
-//            return;
-//        }
-//
-//        for (int i = 0; i < nElements; i++) {
-//            if (!nd.hasElement(i) && !coverMap.get(i).isEmpty()) {
-//                BLMMCSNode childNode = nd.getChildNode(i);
-//                walkDown(childNode, BLMMCSNodes);
-//            }
-//        }
-//    }
-
-
+    /**
+     * @param addedSets unique BitSets representing new Subsets to be covered
+     */
     public void processAddedSubsets(List<BitSet> addedSets) {
         walkedDown.clear();
 
-        List<Subset> addedSubsets = addedSets.stream().map(Subset::new).collect(Collectors.toList());
+        hasEmptySubset |= addedSets.stream().anyMatch(BitSet::isEmpty);
+        List<Subset> addedSubsets = addedSets.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toList());
+
         for (Subset sb : addedSubsets) {
-            if (sb.elements.isEmpty()) hasEmptySubset = true;
-            else sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
+            sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
         for (BLMMCSNode prevNode : BLMMCSNodes) {
             prevNode.addSubsets(addedSubsets);
-            //walkDown(prevNode, newCoverSets);
-        }
-        for (BLMMCSNode prevNode : BLMMCSNodes) {
-            //prevNode.addSubsets(addedSubsets);
             walkDown(prevNode, newCoverSets);
         }
 
@@ -128,42 +107,44 @@ public class BLMMCS {
     }
 
     /**
-     * keep node S if (S is a cover) and (S is global minimal or has non-cover parents)
+     * keep node nd if (nd is a cover) and (nd is global minimal or has non-cover parents)
      */
-    public void walkUp(BLMMCSNode S, List<BLMMCSNode> newNodes) {
-        if (!S.isCover() || walkedUp.contains(S.hashCode())) return;
+    void walkUp(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
+        if (!nd.isCover() || walkedUp.contains(nd.hashCode())) return;
 
-        walkedUp.add(S.hashCode());
+        walkedUp.add(nd.hashCode());
 
-        if (S.isGlobalMinimal()) {
-            newNodes.add(S);
+        if (nd.isGlobalMinimal()) {
+            newNodes.add(nd);
             return;
         }
 
         boolean hasNonCoverParent = false;
 
-        PrimitiveIterator.OfInt it = S.getRemoveCandidates().iterator();
-        while (it.hasNext()) {
-            int e = it.nextInt();
-            if (S.parentIsCover(e)) walkUp(S.getParentNode(e, coverMap), newNodes);
+        for (int e : nd.getRemoveCandidates().toArray()) {
+            if (nd.parentIsCover(e)) walkUp(nd.getParentNode(e, coverMap), newNodes);
             else hasNonCoverParent = true;
         }
 
-        if (hasNonCoverParent) newNodes.add(S);
+        if (hasNonCoverParent) newNodes.add(nd);
     }
 
+    /**
+     * @param removedSets unique BitSets representing existing Subsets to be removed
+     */
     public void processRemovedSubsets(List<BitSet> removedSets) {
         walkedUp.clear();
 
-        Set<Subset> removedSubsets = removedSets.stream().map(Subset::new).collect(Collectors.toSet());
-        for (Subset sb : removedSubsets) {
-            if (sb.elements.isEmpty()) hasEmptySubset = false;
+        hasEmptySubset &= removedSets.stream().noneMatch(BitSet::isEmpty);
+
+        Set<Subset> removed = removedSets.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toSet());
+        for (Subset sb : removed) {
             sb.getEleStream().forEach(e -> coverMap.get(e).remove(sb));
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
         for (BLMMCSNode prevNode : BLMMCSNodes) {
-            prevNode.removeSubsets(removedSubsets);
+            prevNode.removeSubsets(removed);
             walkUp(prevNode, newCoverSets);
         }
 
