@@ -20,6 +20,8 @@ public class BLMMCS {
      */
     private List<BLMMCSNode> BLMMCSNodes = new ArrayList<>();
 
+    private boolean hasEmptySubset = false;
+
     /**
      * nodes that have been walked down during current iteration, by the hashCode of its elements
      */
@@ -43,8 +45,12 @@ public class BLMMCS {
         }
     }
 
+    /**
+     * @param toCover unique BitSets representing Subsets to be covered
+     */
     public void initiate(List<BitSet> toCover) {
-        List<Subset> subsetsToCover = toCover.stream().map(Subset::new).collect(Collectors.toList());
+        hasEmptySubset = toCover.stream().anyMatch(BitSet::isEmpty);
+        List<Subset> subsetsToCover = toCover.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toList());
 
         for (Subset sb : subsetsToCover) {
             sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
@@ -68,11 +74,35 @@ public class BLMMCS {
         }
 
         // TODO: prune: remove an ele from nd and check whether it's been walked?
-        nd.getAddCandidates().forEach(e -> {
-            BLMMCSNode childNd = nd.getChildNode(e);
-            walkDown(childNd, newNodes);
+        nd.getAddCandidates(coverMap).forEach(e -> {
+            BLMMCSNode childNode = nd.getChildNode(e);
+            walkDown(childNode, newNodes);
         });
+
+//        nd.getAddCandidates().forEach(e -> {
+//            BLMMCSNode childNd = nd.getChildNode(e);
+//            walkDown(childNd, newNodes);
+//        });
     }
+
+//    void walkDown(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
+//        if (walked.containsKey(nd.hashCode())) return;
+//        walked.put(nd.hashCode(), nd.isCover());
+//
+//        if(nd.getElements().stream().allMatch(nd::parentIsCover)) return;
+//
+//        if (nd.isCover()) {
+//            newNodes.add(nd);
+//            return;
+//        }
+//
+//        for (int i = 0; i < nElements; i++) {
+//            if (!nd.hasElement(i) && !coverMap.get(i).isEmpty()) {
+//                BLMMCSNode childNode = nd.getChildNode(i);
+//                walkDown(childNode, BLMMCSNodes);
+//            }
+//        }
+//    }
 
 
     public void processAddedSubsets(List<BitSet> addedSets) {
@@ -80,12 +110,17 @@ public class BLMMCS {
 
         List<Subset> addedSubsets = addedSets.stream().map(Subset::new).collect(Collectors.toList());
         for (Subset sb : addedSubsets) {
-            sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
+            if (sb.elements.isEmpty()) hasEmptySubset = true;
+            else sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
         for (BLMMCSNode prevNode : BLMMCSNodes) {
             prevNode.addSubsets(addedSubsets);
+            //walkDown(prevNode, newCoverSets);
+        }
+        for (BLMMCSNode prevNode : BLMMCSNodes) {
+            //prevNode.addSubsets(addedSubsets);
             walkDown(prevNode, newCoverSets);
         }
 
@@ -121,8 +156,9 @@ public class BLMMCS {
         walkedUp.clear();
 
         Set<Subset> removedSubsets = removedSets.stream().map(Subset::new).collect(Collectors.toSet());
-        for (Subset removedSb : removedSubsets) {
-            removedSb.getEleStream().forEach(e -> coverMap.get(e).remove(removedSb));
+        for (Subset sb : removedSubsets) {
+            if (sb.elements.isEmpty()) hasEmptySubset = false;
+            sb.getEleStream().forEach(e -> coverMap.get(e).remove(sb));
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
@@ -135,7 +171,7 @@ public class BLMMCS {
     }
 
     public List<BitSet> getGlobalMinCoverSets() {
-        return BLMMCSNodes.stream()
+        return hasEmptySubset ? new ArrayList<>() : BLMMCSNodes.stream()
                 .filter(BLMMCSNode::isGlobalMinimal)
                 .map(BLMMCSNode::getElements)
                 .sorted(Utils.BitsetComparator())
@@ -143,7 +179,7 @@ public class BLMMCS {
     }
 
     public List<BitSet> getAllCoverSets() {
-        return BLMMCSNodes.stream()
+        return hasEmptySubset ? new ArrayList<>() : BLMMCSNodes.stream()
                 .map(BLMMCSNode::getElements)
                 .sorted(Utils.BitsetComparator())
                 .collect(Collectors.toList());

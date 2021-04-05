@@ -15,11 +15,12 @@ public class DataLoader {
 
         try {
             CsvReader csvReader = new CsvReader(readCsvFilePath, ',', StandardCharsets.UTF_8);
+
             csvReader.readHeaders();    // 跳过表头
-            // 按行读取除表头外的内容
             while (csvReader.readRecord()) {
                 content.add(new ArrayList<>(Arrays.asList(csvReader.getValues())));
             }
+
             csvReader.close();
         } catch (Exception e) {
             e.printStackTrace();

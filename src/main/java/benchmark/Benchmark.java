@@ -46,8 +46,8 @@ public class Benchmark {
 
         BLMMCSAlgo blmmcsAlgo = new BLMMCSAlgo(pli.nAttributes);
 
-        // testRemove(blmmcsAlgo);
-        testAdd(blmmcsAlgo);
+        testRemove(blmmcsAlgo);
+        //testAdd(blmmcsAlgo);
     }
 
     public static void testRemove(BLMMCSAlgo blmmcsAlgo) {
@@ -81,7 +81,10 @@ public class Benchmark {
         List<BitSet> diffSets = new ArrayList<>(diffSetsMap.keySet()); // diff sets on all attributes
 
         System.out.println("initiating BLMMCS...");
+        long startTime1 = System.nanoTime();
         blmmcsAlgo.initiate(diffSets);
+        long endTime1 = System.nanoTime();
+        System.out.println("initiating runtime: " + (endTime1 - startTime1) / 1000000 + "ms");
 
         printFDs(blmmcsAlgo, FD_OUT_PART[dataset]);
 
