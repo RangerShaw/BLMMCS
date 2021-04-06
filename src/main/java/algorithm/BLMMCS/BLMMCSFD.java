@@ -2,7 +2,10 @@ package algorithm.BLMMCS;
 
 import java.util.*;
 
-public class BLMMCSAlgo {
+/**
+ * BLMMCS Wrapper for FD discovery
+ */
+public class BLMMCSFD {
 
     public int nElements;
 
@@ -10,7 +13,7 @@ public class BLMMCSAlgo {
 
     List<List<BitSet>> minimalCoverSets = new ArrayList<>();
 
-    public BLMMCSAlgo(int nEle) {
+    public BLMMCSFD(int nEle) {
         nElements = nEle;
         for (int i = 0; i < nElements; i++) {
             blmmcsList.add(new BLMMCS(nElements));
