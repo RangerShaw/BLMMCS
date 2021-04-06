@@ -1,7 +1,6 @@
 package algorithm.BLMMCS;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class BLMMCSAlgo {
 
@@ -53,8 +52,6 @@ public class BLMMCSAlgo {
     }
 
     List<BitSet> generateDiffSetsOnRhs(List<BitSet> diffSets, int rhs) {
-        // TODO: what if a new dsI is empty or an existing empty dsI is removed:
-        //  return empty coverSets, but run blmmcs without the empty dsI
         List<BitSet> diffSetsOnRhs = new ArrayList<>();
 
         for (BitSet diffSet : diffSets) {
