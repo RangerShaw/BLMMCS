@@ -18,7 +18,7 @@ public class BLMMCS {
     /**
      * cover sets that are minimal on its local branch
      */
-    private List<BLMMCSNode> BLMMCSNodes = new ArrayList<>();
+    private List<BLMMCSNode> coverNodes = new ArrayList<>();
 
     /**
      * true iff there's an empty subset to cover (which could never be covered).
@@ -63,7 +63,7 @@ public class BLMMCS {
 
         BLMMCSNode initNode = new BLMMCSNode(nElements, subsets);
 
-        walkDown(initNode, BLMMCSNodes);
+        walkDown(initNode, coverNodes);
     }
 
     /**
@@ -98,12 +98,12 @@ public class BLMMCS {
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
-        for (BLMMCSNode prevNode : BLMMCSNodes) {
+        for (BLMMCSNode prevNode : coverNodes) {
             prevNode.addSubsets(addedSubsets);
             walkDown(prevNode, newCoverSets);
         }
 
-        BLMMCSNodes = newCoverSets;
+        coverNodes = newCoverSets;
     }
 
     /**
@@ -143,16 +143,16 @@ public class BLMMCS {
         }
 
         List<BLMMCSNode> newCoverSets = new ArrayList<>();
-        for (BLMMCSNode prevNode : BLMMCSNodes) {
+        for (BLMMCSNode prevNode : coverNodes) {
             prevNode.removeSubsets(removed);
             walkUp(prevNode, newCoverSets);
         }
 
-        BLMMCSNodes = newCoverSets;
+        coverNodes = newCoverSets;
     }
 
     public List<BitSet> getGlobalMinCoverSets() {
-        return hasEmptySubset ? new ArrayList<>() : BLMMCSNodes.stream()
+        return hasEmptySubset ? new ArrayList<>() : coverNodes.stream()
                 .filter(BLMMCSNode::isGlobalMinimal)
                 .map(BLMMCSNode::getElements)
                 .sorted(Utils.BitsetComparator())
@@ -160,7 +160,7 @@ public class BLMMCS {
     }
 
     public List<BitSet> getAllCoverSets() {
-        return hasEmptySubset ? new ArrayList<>() : BLMMCSNodes.stream()
+        return hasEmptySubset ? new ArrayList<>() : coverNodes.stream()
                 .map(BLMMCSNode::getElements)
                 .sorted(Utils.BitsetComparator())
                 .collect(Collectors.toList());

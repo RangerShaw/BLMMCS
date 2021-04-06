@@ -5,13 +5,13 @@ import java.util.stream.IntStream;
 
 public class Subset {
 
-    BitSet elements;
+    public BitSet elements;
 
     public Subset(BitSet _elements) {
         elements = (BitSet) _elements.clone();
     }
 
-    Subset(Subset sb) {
+    public Subset(Subset sb) {
         elements = (BitSet) sb.elements.clone();
     }
 
