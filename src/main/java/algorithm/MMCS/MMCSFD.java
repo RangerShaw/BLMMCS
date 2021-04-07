@@ -42,6 +42,7 @@ public class MMCSFD {
             List<BitSet> diffSets = generateDiffSetsOnRhs(toCover, rhs);
             MMCSList.get(rhs).initiate(diffSets);
             minimalCoverSets.add(MMCSList.get(rhs).getGlobalMinCoverSets());
+            System.out.println(" # of FD on rhs " + rhs + ": " + minimalCoverSets.get(rhs).size());
         }
     }
 

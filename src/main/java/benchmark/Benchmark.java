@@ -45,13 +45,13 @@ public class Benchmark {
         // List<BitSet> diffSetsAll = pli.generateDiffSets();
 
 
-        BLMMCSFD BLMMCSFD = new BLMMCSFD(pli.nAttributes);
+        BLMMCSFD blmmcsfd = new BLMMCSFD(pli.nAttributes);
 
-        //testMultiRemove(blmmcsAlgo);
-        //testMultiAdd(blmmcsAlgo);
-        //testRemove(blmmcsAlgo);
-        //testAdd(BLMMCSFD);
-        testMMCS();
+        //testMultiRemove(blmmcsfd);
+        //testMultiAdd(blmmcsfd);
+        testRemove(blmmcsfd);
+        //testAdd(blmmcsfd);
+        //testMMCS();
     }
 
     static String[] MULTI_DS_IN = new String[]{
@@ -73,21 +73,22 @@ public class Benchmark {
 
     public static void testMMCS() {
         // load data
-        List<List<String>> csvData = DataLoader.readCsvFile("dataFiles\\hepatitis\\hepatitis.csv");
+        List<List<String>> csvData = DataLoader.readCsvFile(CSV_IN_FULL[0]);
 
         // initiate pli and differenceSet
         PLI pli = new PLI(csvData);
 
         MMCSFD mmcsfd = new MMCSFD(pli.nAttributes);
 
-        Map<BitSet, Integer> dsMap = DataLoader.readYyaDiffSets("dataFiles\\hepatitis\\hepatitis.txt");
+        Map<BitSet, Integer> dsMap = DataLoader.readYyaDiffSets(MULTI_DS_IN[0]);
         List<BitSet> baseDiffSets = new ArrayList<>(dsMap.keySet());
         System.out.println("initiating MMCS...");
         long startTime1 = System.nanoTime();
         mmcsfd.initiate(baseDiffSets);
         long endTime1 = System.nanoTime();
         System.out.println("initiating runtime: " + (endTime1 - startTime1) / 1000000 + "ms");
-        printFDs(mmcsfd, "dataFiles\\hepatitis\\hepatitisFD.txt");
+        printFDs(mmcsfd, MULTI_FD_OUT[0]);
+        System.out.println();
     }
 
     public static void testMultiAdd(BLMMCSFD blmmcsfd) {
@@ -151,7 +152,7 @@ public class Benchmark {
         long startTime = System.nanoTime();
         for (int i = 4; i >= 0; i--) {
             blmmcsfd.processRemovedSubsets(multiRemovedDs.get(4 - i));
-            //printFDs(blmmcsAlgo, MULTI_FD_OUT[i]);      // TODO: should remove during benchmark
+            printFDs(blmmcsfd, MULTI_FD_OUT[i]);      // TODO: should remove during benchmark
         }
         long endTime = System.nanoTime();
         System.out.println("total runtime of REMOVE: " + (endTime - startTime) / 1000000 + "ms");
@@ -212,6 +213,7 @@ public class Benchmark {
     public static void printFDs(BLMMCSFD blmmcsfd, String writeFilePath) {
         List<List<BitSet>> fd = blmmcsfd.getMinimalCoverSets();
         for (int i = 0; i < fd.size(); i++) {
+            System.out.println("# of FD on attribute " + i + ": " + fd.get(i).size());
             try {
                 PrintWriter pw = new PrintWriter(new FileWriter(writeFilePath, false));
                 pw.println("FDs for attr " + i);
