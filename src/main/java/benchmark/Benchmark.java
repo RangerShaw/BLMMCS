@@ -1,6 +1,6 @@
 package benchmark;
 
-import algorithm.BLMMCS.BLMMCSFD;
+import algorithm.MMCS.BLMMCS.BLMMCSFD;
 import algorithm.MMCS.MMCSFD;
 import algorithm.differenceSet.PLI;
 import util.DataLoader;

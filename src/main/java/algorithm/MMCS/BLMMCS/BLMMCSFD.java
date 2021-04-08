@@ -1,4 +1,4 @@
-package algorithm.BLMMCS;
+package algorithm.MMCS.BLMMCS;
 
 import java.util.*;
 

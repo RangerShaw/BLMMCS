@@ -1,5 +1,6 @@
-package algorithm.BLMMCS;
+package algorithm.MMCS.BLMMCS;
 
+import algorithm.MMCS.Subset;
 import util.Utils;
 
 import java.util.*;
@@ -36,6 +37,8 @@ public class BLMMCS {
      */
     private Set<Integer> walkedUp = new HashSet<>();
 
+    private boolean walkedUpLastTime = true;
+
     /**
      * coverMap[e]: subsets with element e
      */
@@ -44,16 +47,16 @@ public class BLMMCS {
 
     public BLMMCS(int nEle) {
         nElements = nEle;
-
-        for (int i = 0; i < nElements; i++) {
-            coverMap.add(new ArrayList<>());
-        }
     }
 
     /**
      * @param toCover unique BitSets representing Subsets to be covered
      */
     public void initiate(List<BitSet> toCover) {
+        for (int i = 0; i < nElements; i++) {
+            coverMap.add(new ArrayList<>());
+        }
+
         List<Subset> subsets = new ArrayList<>(toCover.size());
         for (BitSet bs : toCover) {
             if (bs.isEmpty()) hasEmptySubset = true;
@@ -161,6 +164,7 @@ public class BLMMCS {
         long endTime2 = System.nanoTime();
         System.out.println(" [BLMMCS] REMOVE runtime 2: " + (endTime2 - endTime1) / 1000000 + "ms");
         System.out.println(" [BLMMCS] # of Nodes walked up: " + walkedUp.size());
+        System.out.println(" [BLMMCS] # of Nodes retained: " + coverNodes.size());
 
         coverNodes = newCoverSets;
     }

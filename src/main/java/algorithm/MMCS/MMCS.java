@@ -1,7 +1,5 @@
 package algorithm.MMCS;
 
-import algorithm.MMCS.MMCSNode;
-import algorithm.BLMMCS.Subset;
 import util.Utils;
 
 import java.util.*;
@@ -12,18 +10,18 @@ public class MMCS {
     /**
      * number of elements or attributes
      */
-    private int nElements;
+    int nElements;
 
     /**
      * each node represents a minimal cover set
      */
-    private List<MMCSNode> coverNodes = new ArrayList<>();
+    List<MMCSNode> coverNodes = new ArrayList<>();
 
     /**
      * true iff there's an empty subset to cover (which could never be covered).
      * return no cover set if true but walk down without the empty subset
      */
-    private boolean hasEmptySubset = false;
+    boolean hasEmptySubset = false;
 
 
     public MMCS(int nEle) {

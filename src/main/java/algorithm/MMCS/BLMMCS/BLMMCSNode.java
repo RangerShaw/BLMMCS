@@ -1,4 +1,6 @@
-package algorithm.BLMMCS;
+package algorithm.MMCS.BLMMCS;
+
+import algorithm.MMCS.Subset;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -26,8 +28,6 @@ public class BLMMCSNode {
     private BLMMCSNode(int nEle) {
         nElements = nEle;
     }
-
-    ArrayList<ArrayList<Integer>> coverCount;
 
     /**
      * for initiation only
@@ -57,6 +57,10 @@ public class BLMMCSNode {
         return (BitSet) elements.clone();
     }
 
+    public int getElementsCount() {
+        return elements.cardinality();
+    }
+
     public IntStream getEleStream() {
         return elements.stream();
     }
@@ -80,7 +84,7 @@ public class BLMMCSNode {
     }
 
     public IntStream getRemoveCandidates() {
-        return elements.stream().filter(this::hasNoCritOn);
+        return elements.stream().filter(e -> crit.get(e).isEmpty());
     }
 
     public BLMMCSNode getChildNode(int e) {

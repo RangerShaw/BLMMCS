@@ -1,4 +1,4 @@
-package algorithm.BLMMCS;
+package algorithm.MMCS;
 
 import java.util.BitSet;
 import java.util.stream.IntStream;
