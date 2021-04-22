@@ -3,6 +3,7 @@ package benchmark;
 import algorithm.MMCS.BLMMCS.BLMMCSFD;
 import algorithm.MMCS.MMCSFD;
 import algorithm.differenceSet.PLI;
+import algorithm.differenceSet.PliDsConnector;
 import util.DataLoader;
 
 import java.io.*;
@@ -40,12 +41,10 @@ public class Benchmark {
         List<List<String>> csvData = DataLoader.readCsvFile(CSV_IN_FULL[dataset]);
 
         // initiate pli and differenceSet
-        PLI pli = new PLI();
-        pli.initiate(csvData);
         // List<BitSet> diffSetsAll = pli.generateDiffSets();
 
 
-        BLMMCSFD blmmcsfd = new BLMMCSFD(pli.nAttributes);
+        BLMMCSFD blmmcsfd = new BLMMCSFD(17);
 
         //testMultiRemove(blmmcsfd);
         //testMultiAdd(blmmcsfd);
@@ -76,10 +75,10 @@ public class Benchmark {
         List<List<String>> csvData = DataLoader.readCsvFile(CSV_IN_FULL[0]);
 
         // initiate pli and differenceSet
-        PLI pli = new PLI();
-        pli.initiate(csvData);
-        Map<BitSet, Integer> diffSets = pli.genDiffSets();
+        PliDsConnector dsConnector = new PliDsConnector(csvData);
+        Map<BitSet, Integer> diffSets = dsConnector.getDiffSets();
         System.out.println(diffSets.size());
+
 
 //        MMCSFD mmcsfd = new MMCSFD(pli.nAttributes);
 //
