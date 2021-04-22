@@ -40,8 +40,8 @@ public class Benchmark {
         List<List<String>> csvData = DataLoader.readCsvFile(CSV_IN_FULL[dataset]);
 
         // initiate pli and differenceSet
-        PLI pli = new PLI(csvData);
-        pli.generatePLI();
+        PLI pli = new PLI();
+        pli.initiate(csvData);
         // List<BitSet> diffSetsAll = pli.generateDiffSets();
 
 
@@ -49,9 +49,9 @@ public class Benchmark {
 
         //testMultiRemove(blmmcsfd);
         //testMultiAdd(blmmcsfd);
-        testRemove(blmmcsfd);
+        //testRemove(blmmcsfd);
         //testAdd(blmmcsfd);
-        //testMMCS();
+        testMMCS();
     }
 
     static String[] MULTI_DS_IN = new String[]{
@@ -76,19 +76,22 @@ public class Benchmark {
         List<List<String>> csvData = DataLoader.readCsvFile(CSV_IN_FULL[0]);
 
         // initiate pli and differenceSet
-        PLI pli = new PLI(csvData);
+        PLI pli = new PLI();
+        pli.initiate(csvData);
+        Map<BitSet, Integer> diffSets = pli.genDiffSets();
+        System.out.println(diffSets.size());
 
-        MMCSFD mmcsfd = new MMCSFD(pli.nAttributes);
-
-        Map<BitSet, Integer> dsMap = DataLoader.readYyaDiffSets(MULTI_DS_IN[0]);
-        List<BitSet> baseDiffSets = new ArrayList<>(dsMap.keySet());
-        System.out.println("initiating MMCS...");
-        long startTime1 = System.nanoTime();
-        mmcsfd.initiate(baseDiffSets);
-        long endTime1 = System.nanoTime();
-        System.out.println("initiating runtime: " + (endTime1 - startTime1) / 1000000 + "ms");
-        printFDs(mmcsfd, MULTI_FD_OUT[0]);
-        System.out.println();
+//        MMCSFD mmcsfd = new MMCSFD(pli.nAttributes);
+//
+//        Map<BitSet, Integer> dsMap = DataLoader.readYyaDiffSets(MULTI_DS_IN[0]);
+//        List<BitSet> baseDiffSets = new ArrayList<>(dsMap.keySet());
+//        System.out.println("initiating MMCS...");
+//        long startTime1 = System.nanoTime();
+//        mmcsfd.initiate(baseDiffSets);
+//        long endTime1 = System.nanoTime();
+//        System.out.println("initiating runtime: " + (endTime1 - startTime1) / 1000000 + "ms");
+//        printFDs(mmcsfd, MULTI_FD_OUT[0]);
+//        System.out.println();
     }
 
     public static void testMultiAdd(BLMMCSFD blmmcsfd) {
