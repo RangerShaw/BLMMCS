@@ -33,5 +33,4 @@ public class PliDsConnector {
         List<List<Integer>> updatedClusters = Pli.insertData(insertedData);
         differenceSet.insertData(insertedData.size(), updatedClusters);
     }
-
 }
