@@ -90,4 +90,20 @@ FDs for attr 0
 {5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16}
 {5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 {5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+FDs for attr 1
+FDs for attr 2
+FDs for attr 3
+FDs for attr 4
+FDs for attr 5
+FDs for attr 6
+FDs for attr 7
+FDs for attr 8
+FDs for attr 9
+FDs for attr 10
+FDs for attr 11
+FDs for attr 12
+FDs for attr 13
+FDs for attr 14
+FDs for attr 15
+FDs for attr 16
 

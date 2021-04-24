@@ -1,15 +1,14 @@
-package algorithm.MMCS.BLMMCS;
+package algorithm.hittingSet.ABLMMCS;
 
-import algorithm.MMCS.Subset;
+import algorithm.hittingSet.Subset;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
 
-/**
- * each BLMMCSNode corresponds uniquely with a set of elements
- * which is an intermediate (potentially) cover set
- */
-public class BLMMCSNode {
+public class ABLMMCSNode {
 
     private int nElements;
 
@@ -25,14 +24,14 @@ public class BLMMCSNode {
      */
     private ArrayList<ArrayList<Subset>> crit;
 
-    private BLMMCSNode(int nEle) {
+    private ABLMMCSNode(int nEle) {
         nElements = nEle;
     }
 
     /**
      * for initiation only
      */
-    public BLMMCSNode(int nEle, List<Subset> subsetsToCover) {
+    public ABLMMCSNode(int nEle, List<Subset> subsetsToCover) {
         nElements = nEle;
         elements = new BitSet(nElements);
         uncov = new ArrayList<>(subsetsToCover);
@@ -50,15 +49,11 @@ public class BLMMCSNode {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof BLMMCSNode && ((BLMMCSNode) obj).elements.equals(elements);
+        return obj instanceof ABLMMCSNode && ((ABLMMCSNode) obj).elements.equals(elements);
     }
 
     public BitSet getElements() {
         return (BitSet) elements.clone();
-    }
-
-    public int getElementsCount() {
-        return elements.cardinality();
     }
 
     public IntStream getEleStream() {
@@ -71,6 +66,10 @@ public class BLMMCSNode {
 
     boolean isCover() {
         return uncov.isEmpty();
+    }
+
+    boolean isApproxCover(double threshold, int nSubsets) {
+        return threshold * nSubsets >= (double) uncov.size();
     }
 
     public boolean isGlobalMinimal() {
@@ -87,8 +86,8 @@ public class BLMMCSNode {
         return elements.stream().filter(e -> crit.get(e).isEmpty());
     }
 
-    public BLMMCSNode getChildNode(int e) {
-        BLMMCSNode childNode = new BLMMCSNode(nElements);
+    public ABLMMCSNode getChildNode(int e) {
+        ABLMMCSNode childNode = new ABLMMCSNode(nElements);
         childNode.cloneContext(this);
         childNode.updateContextFromParent(e, this);
         return childNode;
@@ -109,7 +108,7 @@ public class BLMMCSNode {
         return elements.stream().anyMatch(e -> !crit.get(e).isEmpty());
     }
 
-    void cloneContext(BLMMCSNode originalNode) {
+    void cloneContext(ABLMMCSNode originalNode) {
         elements = (BitSet) originalNode.elements.clone();
 
         crit = new ArrayList<>(nElements);
@@ -119,9 +118,9 @@ public class BLMMCSNode {
     }
 
     /**
-     * general version of BLMMCS for simply discovering cover sets
+     * general version of ABLMMCS for simply discovering cover sets
      */
-    void updateContextFromChild(int e, List<List<Subset>> coverMap, BLMMCSNode childNode) {
+    void updateContextFromChild(int e, List<List<Subset>> coverMap, ABLMMCSNode childNode) {
         elements.clear(e);
 
         uncov = new ArrayList<>();      // always empty
@@ -134,15 +133,15 @@ public class BLMMCSNode {
         crit.get(e).clear();
     }
 
-    public BLMMCSNode getParentNode(int e, List<List<Subset>> coverMap) {
-        BLMMCSNode parentNode = new BLMMCSNode(nElements);
+    public ABLMMCSNode getParentNode(int e, List<List<Subset>> coverMap) {
+        ABLMMCSNode parentNode = new ABLMMCSNode(nElements);
         parentNode.cloneContext(this);
         parentNode.updateContextFromChild(e, coverMap, this);
         return parentNode;
     }
 
 
-    void updateContextFromParent(int e, BLMMCSNode parentNode) {
+    void updateContextFromParent(int e, ABLMMCSNode parentNode) {
         uncov = new ArrayList<>();
 
         for (Subset sb : parentNode.uncov) {
@@ -163,7 +162,9 @@ public class BLMMCSNode {
             intersec.and(newSb.elements);
 
             if (intersec.isEmpty()) uncov.add(newSb);
-            if (intersec.cardinality() == 1) crit.get(intersec.nextSetBit(0)).add(newSb);
+
+            int critCover = newSb.getCritCover(elements);
+            if (critCover >= 0) crit.get(critCover).add(newSb);
         }
     }
 
@@ -172,5 +173,6 @@ public class BLMMCSNode {
             critSubsets.removeIf(removedBitSets::contains);
         }
     }
+
 
 }

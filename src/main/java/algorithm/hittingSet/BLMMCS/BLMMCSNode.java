@@ -1,14 +1,16 @@
-package algorithm.MMCS.ABLMMCS;
+package algorithm.hittingSet.BLMMCS;
 
-import algorithm.MMCS.Subset;
+import algorithm.hittingSet.Subset;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.IntStream;
 
-public class ABLMMCSNode {
+/**
+ * each BLMMCSNode corresponds uniquely with a set of elements
+ * which is an intermediate (potentially) cover set
+ */
+public class BLMMCSNode {
+
     private int nElements;
 
     private BitSet elements;
@@ -23,14 +25,14 @@ public class ABLMMCSNode {
      */
     private ArrayList<ArrayList<Subset>> crit;
 
-    private ABLMMCSNode(int nEle) {
+    private BLMMCSNode(int nEle) {
         nElements = nEle;
     }
 
     /**
      * for initiation only
      */
-    public ABLMMCSNode(int nEle, List<Subset> subsetsToCover) {
+    public BLMMCSNode(int nEle, List<Subset> subsetsToCover) {
         nElements = nEle;
         elements = new BitSet(nElements);
         uncov = new ArrayList<>(subsetsToCover);
@@ -48,7 +50,7 @@ public class ABLMMCSNode {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof ABLMMCSNode && ((ABLMMCSNode) obj).elements.equals(elements);
+        return obj instanceof BLMMCSNode && ((BLMMCSNode) obj).elements.equals(elements);
     }
 
     public BitSet getElements() {
@@ -85,8 +87,8 @@ public class ABLMMCSNode {
         return elements.stream().filter(e -> crit.get(e).isEmpty());
     }
 
-    public ABLMMCSNode getChildNode(int e) {
-        ABLMMCSNode childNode = new ABLMMCSNode(nElements);
+    public BLMMCSNode getChildNode(int e) {
+        BLMMCSNode childNode = new BLMMCSNode(nElements);
         childNode.cloneContext(this);
         childNode.updateContextFromParent(e, this);
         return childNode;
@@ -107,7 +109,7 @@ public class ABLMMCSNode {
         return elements.stream().anyMatch(e -> !crit.get(e).isEmpty());
     }
 
-    void cloneContext(ABLMMCSNode originalNode) {
+    void cloneContext(BLMMCSNode originalNode) {
         elements = (BitSet) originalNode.elements.clone();
 
         crit = new ArrayList<>(nElements);
@@ -117,9 +119,9 @@ public class ABLMMCSNode {
     }
 
     /**
-     * general version of ABLMMCS for simply discovering cover sets
+     * general version of BLMMCS for simply discovering cover sets
      */
-    void updateContextFromChild(int e, List<List<Subset>> coverMap, ABLMMCSNode childNode) {
+    void updateContextFromChild(int e, List<List<Subset>> coverMap, BLMMCSNode childNode) {
         elements.clear(e);
 
         uncov = new ArrayList<>();      // always empty
@@ -132,15 +134,15 @@ public class ABLMMCSNode {
         crit.get(e).clear();
     }
 
-    public ABLMMCSNode getParentNode(int e, List<List<Subset>> coverMap) {
-        ABLMMCSNode parentNode = new ABLMMCSNode(nElements);
+    public BLMMCSNode getParentNode(int e, List<List<Subset>> coverMap) {
+        BLMMCSNode parentNode = new BLMMCSNode(nElements);
         parentNode.cloneContext(this);
         parentNode.updateContextFromChild(e, coverMap, this);
         return parentNode;
     }
 
 
-    void updateContextFromParent(int e, ABLMMCSNode parentNode) {
+    void updateContextFromParent(int e, BLMMCSNode parentNode) {
         uncov = new ArrayList<>();
 
         for (Subset sb : parentNode.uncov) {
@@ -170,6 +172,5 @@ public class ABLMMCSNode {
             critSubsets.removeIf(removedBitSets::contains);
         }
     }
-
 
 }

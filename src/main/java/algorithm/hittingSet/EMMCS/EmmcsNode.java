@@ -1,12 +1,16 @@
-package algorithm.MMCS;
+package algorithm.hittingSet.EMMCS;
+
+import algorithm.hittingSet.Subset;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
-public class MMCSNode {
+public class EmmcsNode {
 
     private int nElements;
 
+    /**
+     * elements of current node
+     */
     private BitSet elements;
 
     private BitSet cand;
@@ -21,14 +25,15 @@ public class MMCSNode {
      */
     private ArrayList<ArrayList<Subset>> crit;
 
-    private MMCSNode(int nEle) {
+
+    private EmmcsNode(int nEle) {
         nElements = nEle;
     }
 
     /**
      * for initiation only
      */
-    public MMCSNode(int nEle, List<Subset> subsetsToCover) {
+    EmmcsNode(int nEle, List<Subset> subsetsToCover) {
         nElements = nEle;
         elements = new BitSet(nElements);
         uncov = new ArrayList<>(subsetsToCover);
@@ -49,23 +54,15 @@ public class MMCSNode {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof MMCSNode && ((MMCSNode) obj).elements.equals(elements);
+        return obj instanceof EmmcsNode && ((EmmcsNode) obj).elements.equals(elements);
     }
 
-    public BitSet getElements() {
+    BitSet getElements() {
         return (BitSet) elements.clone();
     }
 
-    public BitSet getCand() {
+    BitSet getCand() {
         return (BitSet) cand.clone();
-    }
-
-    public IntStream getEleStream() {
-        return elements.stream();
-    }
-
-    public boolean hasElement(int e) {
-        return elements.get(e);
     }
 
     boolean isCover() {
@@ -80,7 +77,7 @@ public class MMCSNode {
      * find an uncovered subset with the optimal intersection with cand,
      * return its intersection with cand
      */
-    public BitSet getAddCandidates() {
+    BitSet getAddCandidates() {
         Comparator<Subset> cmp = Comparator.comparing(sb -> {
             BitSet t = ((BitSet) cand.clone());
             t.and(sb.elements);
@@ -97,36 +94,49 @@ public class MMCSNode {
         return C;
     }
 
-    public MMCSNode getChildNode(int e, BitSet childCand) {
-        MMCSNode childNode = new MMCSNode(nElements);
+    EmmcsNode getChildNode(int e, BitSet childCand) {
+        EmmcsNode childNode = new EmmcsNode(nElements);
         childNode.cloneContext(childCand, this);
         childNode.updateContextFromParent(e, this);
         return childNode;
     }
 
-    void cloneContext(BitSet outerCand, MMCSNode originalNode) {
+    void cloneContext(BitSet outerCand, EmmcsNode originalNode) {
         elements = (BitSet) originalNode.elements.clone();
         cand = (BitSet) outerCand.clone();
 
         crit = new ArrayList<>(nElements);
         for (int i = 0; i < nElements; i++) {
-            crit.add((ArrayList<Subset>) originalNode.crit.get(i).clone());
+            crit.add(new ArrayList<>(originalNode.crit.get(i)));
         }
     }
 
-    void updateContextFromParent(int currE, MMCSNode parentNode) {
+    void updateContextFromParent(int e, EmmcsNode parentNode) {
         uncov = new ArrayList<>();
 
         for (Subset sb : parentNode.uncov) {
-            if (sb.hasElement(currE)) crit.get(currE).add(sb);
+            if (sb.hasElement(e)) crit.get(e).add(sb);
             else uncov.add(sb);
         }
 
         elements.stream().forEach(u -> {
-            crit.get(u).removeIf(F -> F.hasElement(currE));
+            crit.get(u).removeIf(F -> F.hasElement(e));
         });
 
-        elements.set(currE);
+        elements.set(e);
+    }
+
+    void insertSubsets(List<Subset> newSubsets) {
+        cand = (BitSet) elements.clone();
+        cand.flip(0, nElements);
+
+        for (Subset newSb : newSubsets) {
+            BitSet intersec = (BitSet) elements.clone();
+            intersec.and(newSb.elements);
+
+            if (intersec.isEmpty()) uncov.add(newSb);
+            if (intersec.cardinality() == 1) crit.get(intersec.nextSetBit(0)).add(newSb);
+        }
     }
 
 }

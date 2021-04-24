@@ -1,15 +1,12 @@
-package algorithm.MMCS.BLMMCS;
+package algorithm.hittingSet.ABLMMCS;
 
-import algorithm.MMCS.Subset;
+import algorithm.hittingSet.Subset;
 import util.Utils;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Bidirectional Local MMCS
- */
-public class BLMMCS {
+public class ABLMMCS {
 
     /**
      * number of total elements or attributes
@@ -17,9 +14,19 @@ public class BLMMCS {
     private int nElements;
 
     /**
+     * maximal allowed error rate
+     */
+    double threshold;
+
+    /**
+     * number of subsets to cover, excluding the empty subset
+     */
+    int nSubsets;
+
+    /**
      * cover sets that are minimal on its local branch
      */
-    private List<BLMMCSNode> coverNodes = new ArrayList<>();
+    private List<ABLMMCSNode> coverNodes = new ArrayList<>();
 
     /**
      * true iff there's an empty subset to cover (which could never be covered).
@@ -30,7 +37,7 @@ public class BLMMCS {
     /**
      * nodes that have been walked down during current iteration, by the hashCode of its elements
      */
-    private Set<Integer> walkedDown = new HashSet<>();
+    private Map<Integer, Boolean> walkedDown = new HashMap<>();
 
     /**
      * nodes that have been walked up during current iteration, by the hashCode of its elements
@@ -45,30 +52,27 @@ public class BLMMCS {
     List<List<Subset>> coverMap = new ArrayList<>();
 
 
-    public BLMMCS(int nEle) {
+    public ABLMMCS(int nEle, double thre) {
         nElements = nEle;
+        threshold = thre;
     }
 
     /**
      * @param toCover unique BitSets representing Subsets to be covered
      */
     public void initiate(List<BitSet> toCover) {
-        for (int i = 0; i < nElements; i++) {
+        hasEmptySubset = toCover.stream().anyMatch(BitSet::isEmpty);
+        List<Subset> subsets = toCover.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toList());
+        nSubsets = subsets.size();
+
+        for (int i = 0; i < nElements; i++)
             coverMap.add(new ArrayList<>());
-        }
-
-        List<Subset> subsets = new ArrayList<>(toCover.size());
-        for (BitSet bs : toCover) {
-            if (bs.isEmpty()) hasEmptySubset = true;
-            else subsets.add(new Subset(bs));
-        }
-
-        for (Subset sb : subsets) {
+        for (Subset sb : subsets)
             sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
-        }
 
-        BLMMCSNode initNode = new BLMMCSNode(nElements, subsets);
-
+        ABLMMCSNode initNode = new ABLMMCSNode(nElements, subsets);
+        // TODO: what if initNode is an approx cover
+        walkedDown.put(initNode.hashCode(), false);
         walkDown(initNode, coverNodes);
 
         System.out.println("# of Nodes walked: " + walkedDown.size());
@@ -77,19 +81,22 @@ public class BLMMCS {
     /**
      * down from nd, find all locally minimal cover sets that are minimal on its local branch
      */
-    void walkDown(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
-        if (walkedDown.contains(nd.hashCode())) return;
-        walkedDown.add(nd.hashCode());
+    boolean walkDown(ABLMMCSNode nd, List<ABLMMCSNode> newApproxCovers) {
+        if (walkedDown.containsKey(nd.hashCode())) return walkedDown.get(nd.hashCode());
 
-        if (nd.isCover()) {
-            newNodes.add(nd);
-            return;
+        boolean isApproxCover = nd.isApproxCover(threshold, nSubsets);
+        walkedDown.put(nd.hashCode(), isApproxCover);
+
+        if (isApproxCover) {
+            newApproxCovers.add(nd);
+            return isApproxCover;
         }
 
         nd.getAddCandidates(coverMap).forEach(e -> {
-            BLMMCSNode childNode = nd.getChildNode(e);
-            walkDown(childNode, newNodes);
+            ABLMMCSNode childNode = nd.getChildNode(e);
+            walkDown(childNode, newApproxCovers);
         });
+        return isApproxCover;
     }
 
     /**
@@ -101,25 +108,24 @@ public class BLMMCS {
         hasEmptySubset |= addedSets.stream().anyMatch(BitSet::isEmpty);
         List<Subset> addedSubsets = addedSets.stream().filter(bs -> !bs.isEmpty()).map(Subset::new).collect(Collectors.toList());
 
-        for (Subset sb : addedSubsets) {
+        for (Subset sb : addedSubsets)
             sb.getEleStream().forEach(e -> coverMap.get(e).add(sb));
-        }
 
-        List<BLMMCSNode> newCoverSets = new ArrayList<>();
-        for (BLMMCSNode prevNode : coverNodes) {
+        List<ABLMMCSNode> newCoverSets = new ArrayList<>();
+        for (ABLMMCSNode prevNode : coverNodes) {
             prevNode.addSubsets(addedSubsets);
             walkDown(prevNode, newCoverSets);
         }
 
-        System.out.println(" [BLMMCS] # of Nodes walked down: " + walkedDown.size());
-
         coverNodes = newCoverSets;
+
+        System.out.println(" [ABLMMCS] # of Nodes walked down: " + walkedDown.size());
     }
 
     /**
      * keep node nd if (nd is a cover) and (nd is global minimal or has non-cover parents)
      */
-    void walkUp(BLMMCSNode nd, List<BLMMCSNode> newNodes) {
+    void walkUp(ABLMMCSNode nd, List<ABLMMCSNode> newNodes) {
         if (walkedUp.contains(nd.hashCode())) return;
         walkedUp.add(nd.hashCode());
 
@@ -131,7 +137,7 @@ public class BLMMCS {
         if (nd.hasNonCoverParent()) newNodes.add(nd);
 
         nd.getRemoveCandidates().forEach(e -> {
-            BLMMCSNode parentNode = nd.getParentNode(e, coverMap);
+            ABLMMCSNode parentNode = nd.getParentNode(e, coverMap);
             walkUp(parentNode, newNodes);
         });
     }
@@ -149,39 +155,38 @@ public class BLMMCS {
 
         coverMap.forEach(subsets -> subsets.removeIf(removed::contains));
 
-        List<BLMMCSNode> newCoverSets = new ArrayList<>();
-        for (BLMMCSNode prevNode : coverNodes) {
+        List<ABLMMCSNode> newCoverSets = new ArrayList<>();
+        for (ABLMMCSNode prevNode : coverNodes) {
             prevNode.removeSubsets(removed, coverMap);
         }
 
         long endTime1 = System.nanoTime();
-        System.out.println(" [BLMMCS] REMOVE runtime 1: " + (endTime1 - startTime1) / 1000000 + "ms");
+        System.out.println(" [ABLMMCS] REMOVE runtime 1: " + (endTime1 - startTime1) / 1000000 + "ms");
 
-        for (BLMMCSNode prevNode : coverNodes) {
+        for (ABLMMCSNode prevNode : coverNodes) {
             walkUp(prevNode, newCoverSets);
         }
 
         long endTime2 = System.nanoTime();
-        System.out.println(" [BLMMCS] REMOVE runtime 2: " + (endTime2 - endTime1) / 1000000 + "ms");
-        System.out.println(" [BLMMCS] # of Nodes walked up: " + walkedUp.size());
-        System.out.println(" [BLMMCS] # of Nodes retained: " + coverNodes.size());
+        System.out.println(" [ABLMMCS] REMOVE runtime 2: " + (endTime2 - endTime1) / 1000000 + "ms");
+        System.out.println(" [ABLMMCS] # of Nodes walked up: " + walkedUp.size());
+        System.out.println(" [ABLMMCS] # of Nodes retained: " + coverNodes.size());
 
         coverNodes = newCoverSets;
     }
 
     public List<BitSet> getGlobalMinCoverSets() {
         return hasEmptySubset ? new ArrayList<>() : coverNodes.stream()
-                .filter(BLMMCSNode::isGlobalMinimal)
-                .map(BLMMCSNode::getElements)
+                .filter(ABLMMCSNode::isGlobalMinimal)
+                .map(ABLMMCSNode::getElements)
                 .sorted(Utils.BitsetComparator())
                 .collect(Collectors.toList());
     }
 
     public List<BitSet> getAllCoverSets() {
         return hasEmptySubset ? new ArrayList<>() : coverNodes.stream()
-                .map(BLMMCSNode::getElements)
+                .map(ABLMMCSNode::getElements)
                 .sorted(Utils.BitsetComparator())
                 .collect(Collectors.toList());
     }
-
 }

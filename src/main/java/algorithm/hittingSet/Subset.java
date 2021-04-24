@@ -1,4 +1,4 @@
-package algorithm.MMCS;
+package algorithm.hittingSet;
 
 import java.util.BitSet;
 import java.util.stream.IntStream;
