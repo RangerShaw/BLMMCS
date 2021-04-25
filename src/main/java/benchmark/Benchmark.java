@@ -102,8 +102,8 @@ public class Benchmark {
             insertDatas.add(DataLoader.readCsvFile(MULTI_CSV_IN[i + 1]));
         }
 
-        List<List<BitSet>> insertDiffSets = new ArrayList<>();
         long startTime1 = System.nanoTime();
+        List<List<BitSet>> insertDiffSets = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             System.out.println("insert data: " + (i + 1));
             insertDiffSets.add(dsConnector.insertData(insertDatas.get(i)));

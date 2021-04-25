@@ -85,74 +85,10 @@ public class DifferenceSet {
         }
     }
 
-    void updateDiffSets1(List<List<List<Integer>>> pli, int nInsertedTuples,
-                         List<Set<Integer>> updatedClusters, List<Integer> insertedClusters, List<BitSet> newDiffSets) {
-
-        FastBitSet[][] agreeSets = new FastBitSet[nInsertedTuples][nTuples + nInsertedTuples];
-        for (int i = 0; i < nInsertedTuples; i++) {
-            for (int j = 0; j < nTuples + i; j++) {
-                agreeSets[i][j] = new FastBitSet(nAttributes);
-                agreeSets[i][j].setAll();
-            }
-        }
-
-        for (int e = 0; e < nAttributes; e++) {
-            for (int c : updatedClusters.get(e)) {
-                List<Integer> clst = pli.get(e).get(c);
-                for (int i = clst.size() - 1; clst.get(i) >= nTuples; i--)
-                    for (int j = 0; clst.get(j) < nTuples; j++)
-                        agreeSets[clst.get(i) - nTuples][clst.get(j)].clear(e);
-            }
-            for (int c = insertedClusters.get(e); c < pli.get(e).size(); c++) {
-                List<Integer> clst = pli.get(e).get(c);
-                for (int i = 1; i < clst.size() - 1; i++)
-                    for (int j = 0; j < i; j++)
-                        agreeSets[clst.get(i) - nTuples][clst.get(j) - nTuples].clear(e);
-            }
-        }
-
-        for (int i = 0; i < nInsertedTuples; i++) {
-            for (int j = 0; j < nTuples + i; j++)
-                if (fastDiffSets.add(agreeSets[i][j]))
-                    newDiffSets.add(agreeSets[i][j].toBitSet());
-        }
-    }
-
-    void updateDiffSets2(List<List<List<Integer>>> pli, int nInsertedTuples,
-                         List<Set<Integer>> updatedClusters, List<Integer> insertedClusters, List<BitSet> newDiffSets) {
-
-        FastBitSet[][] agreeSets = new FastBitSet[nInsertedTuples][nTuples + nInsertedTuples];
-        for (int i = 0; i < nInsertedTuples; i++) {
-            for (int j = 0; j < nTuples + i; j++) {
-                agreeSets[i][j] = new FastBitSet(nAttributes);
-            }
-        }
-
-        for (int e = 0; e < nAttributes; e++) {
-            for (int c : updatedClusters.get(e)) {
-                List<Integer> clst = pli.get(e).get(c);
-                for (int i = clst.size() - 1; clst.get(i) >= nTuples; i--)
-                    for (int j = 0; clst.get(j) < nTuples; j++)
-                        agreeSets[clst.get(i) - nTuples][clst.get(j)].set(e);
-            }
-            for (int c = insertedClusters.get(e); c < pli.get(e).size(); c++) {
-                List<Integer> clst = pli.get(e).get(c);
-                for (int i = 1; i < clst.size() - 1; i++)
-                    for (int j = 0; j < i; j++)
-                        agreeSets[clst.get(i) - nTuples][clst.get(j) - nTuples].set(e);
-            }
-        }
-
-        for (int i = 0; i < nInsertedTuples; i++) {
-            for (int j = 0; j < nTuples + i; j++)
-                if (fastDiffSets.add(agreeSets[i][j]))
-                    newDiffSets.add(agreeSets[i][j].toInverseBitSet());
-        }
-    }
-
     void updateDiffSets3(List<List<List<Integer>>> pli, int nInsertedTuples,
                          List<Set<Integer>> updatedClusters, List<Integer> insertedClusters, List<BitSet> newDiffSets) {
 
+        long startTime1 = System.nanoTime();
         boolean[][][] agreeSetsMap = new boolean[nInsertedTuples][nTuples + nInsertedTuples][nAttributes];
 
         for (int e = 0; e < nAttributes; e++) {
@@ -169,14 +105,18 @@ public class DifferenceSet {
                         agreeSetsMap[clst.get(i) - nTuples][clst.get(j) - nTuples][e] = true;
             }
         }
+        long endTime1 = System.nanoTime();
+        System.out.println("updateDiffSets3 runtime 1: " + (endTime1 - startTime1) / 1000000 + "ms");
 
-
+        long startTime2 = System.nanoTime();
         for (int i = 0; i < nInsertedTuples; i++) {
             for (int j = 0; j < nTuples + i; j++) {
                 if (dfHash.add(binaryToInt(agreeSetsMap[i][j])))
                     newDiffSets.add(binaryToInverseBitSet(agreeSetsMap[i][j]));
             }
         }
+        long endTime2 = System.nanoTime();
+        System.out.println("updateDiffSets3 runtime 2: " + (endTime2 - startTime2) / 1000000 + "ms");
     }
 
     public List<BitSet> insertData(List<List<List<Integer>>> pli, int nInsertedTuples,
